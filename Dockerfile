@@ -1,0 +1,21 @@
+FROM rocker/shiny:4.0.3
+
+LABEL maintainer=TODO
+LABEL description=TODO
+LABEL version=TODO
+
+RUN Rscript -e 'install.packages("shiny"); \
+                install.packages("DT"); \
+                install.packages("VennDiagram"); \
+                install.packages("UpSetR"); \
+                install.packages("upsetjs"); \
+                install.packages("ggplot2"); \
+                install.packages("plotly"); \
+                install.packages("pheatmap"); \
+                install.packages("gtools"); \
+                install.packages("openxlsx"); \
+                '
+# Delete default sample app
+RUN rm -rf /srv/shiny-server/*
+# Add the virus app
+COPY app.R /srv/shiny-server/
