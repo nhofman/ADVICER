@@ -58,7 +58,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     }
     color <- vector()
     if(-1%in%sign(unlist(xx))){
-        color_down <- colorRampPalette(c("blue", "white"))(length(seq(quantile(unlist(xx), na.rm = TRUE, probs = (1-legend.limit)), 0, break_step))) #blue(n=length(breakSeq)-1) #, low="blue", mid = "white", high="red")
+        color_down <- colorRampPalette(c("green", "white"))(length(seq(quantile(unlist(xx), na.rm = TRUE, probs = (1-legend.limit)), 0, break_step))) #blue(n=length(breakSeq)-1) #, low="blue", mid = "white", high="red")
         color <- c(color,color_down)
     }
     if(1%in%sign(unlist(xx))){
@@ -84,17 +84,31 @@ plotExpression <- function(expr.df, padj.df, gene){
     colnames(lfc.gene) <- c("symbol")
     lfc.gene$padj <- t(padj.df[gene,])
     lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*",NA)))
-    lfc.gene$key <- ifelse(lfc.gene$padj<0.0001,"padj<0.0001",ifelse(lfc.gene$padj<0.001,"padj<0.001",ifelse(lfc.gene$padj<0.01,"padj<0.01",NA)))
     lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
     #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
     #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
-    lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
-    ggplot(lfc.gene, aes(x=time, y=symbol, group=group, color=group)) + geom_line() + geom_point() +
+    lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
+    lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "uninfected", ifelse(grepl("BPL",lfc.gene$time), "inactivated", sub("Mock_","",lfc.gene$time)))
+    lfc.min <- min(lfc.gene$symbol)
+    lfc.max <- max(lfc.gene$symbol) + 0.25
+    p1 <- ggplot(lfc.gene[grepl("h",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=symbol, group=group, color=group)) + geom_line() + geom_point() +
         labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
-        geom_text(aes(label=sig), nudge_y = 0.1, show.legend = NA) + 
+        geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
         theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
               legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
-              axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) 
+              axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
+        theme(plot.margin = unit(c(1,1,1,1), "cm"))
+    p2 <-  ggplot(lfc.gene[!grepl("h",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
+        labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
+        geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
+        theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
+              legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
+              axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
+        theme(plot.margin = unit(c(1,1,1,1), "cm"))
+    #p <- c(p1, p2)
+    #gridExtra::grid.arrange(p1, p2, ncol = 1)
+    #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
+    gridExtra::grid.arrange(p1, p2, ncol = 1, heights = c(10, 10))
 }
 
 datasetInput <- NULL
@@ -103,6 +117,20 @@ datasetInput <- NULL
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    tags$head(
+        tags$style(
+            HTML(".shiny-notification {
+              height: 100px;
+              width: 800px;
+              position:fixed;
+              top: calc(50% - 50px);;
+              left: calc(50% - 400px);;
+              font-size: 28px;
+            }
+           "
+            )
+        )
+    ),
     
     # Application title
     titlePanel("Differential Gene Expression Analysis"),
@@ -110,169 +138,186 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     navbarPage(
         "DGE analysis", 
-                    tabPanel("Upload",
-                             sidebarPanel(
-                                 fileInput("file", label = h5(br("File input")), multiple = T),
-                             ),
-                             mainPanel(
-                                 h3("Uploaded files"),
-                                 tableOutput("table")
-                             )
-                    ),
-                    tabPanel("Volcano Plot / MAPlot",
-                             sidebarPanel(
-                                 selectInput("fileToPlot", label = "Choose file", choices = names(datasetInput)),
-                                 radioButtons("plotTypeSingle", label = h5(strong("Displayed Plot")), choices = c("Volcano", "MAPlot"), selected = "Volcano"),
-                                 sliderInput("LFCsingle",
-                                             h5(strong("LFC cutoff:")),
-                                             min = 0,
-                                             max = 10,
-                                             value = 1, 
-                                             step = 0.5),
-                                 br(),
-                                 #downloadButton("downSingle", "Download")
-                             ),
-                             mainPanel(
-                                 conditionalPanel(
-                                     condition = 'input.plotTypeSingle == "Volcano"',
-                                     #d.V <- vector(),
-                                     plotlyOutput("volcanoPlot", height = "500px"),
-                                     br(),
-                                     dataTableOutput("clickVP")
-                                 ),
-                                 conditionalPanel(
-                                     condition = 'input.plotTypeSingle == "MAPlot"',
-                                     plotlyOutput("MAPlot", height = "500px"),
-                                     br(),
-                                     dataTableOutput("clickMA")
-                                 )
-                             )),
-                    tabPanel("Compare time points",
-                             sidebarPanel(
-                                 radioButtons("plotType", label = h5(strong("Displayed Plot")), choices = c("Venn", "UpSet"), selected = "Venn"),
-                                 selectInput("select_v", label = h5(strong("Select virus")), 
-                                             choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                                             selected = "CoV229E"),
-                                 sliderInput("LFC",
-                                             h5(strong("LFC cutoff:")),
-                                             min = 0,
-                                             max = 10,
-                                             value = 1, 
-                                             step = 0.5),
-                                 actionButton("addHeat", "Show heatmap"),
-                                 br(),
-                                 br(),
-                                 h5(strong("Download table")),
-                                 downloadButton("down_vCSV", "Download as csv"),
-                                 br(),
-                                 downloadButton("down_vXLSX", "Download as xlsx")
-                             ),
-                             mainPanel(
-                                 conditionalPanel(
-                                     condition = 'input.plotType == "UpSet"',
-                                     upsetjsOutput("upset"), #, click = "upsetClick"),
-                                     br(),
-                                     DT::dataTableOutput("clickedElements"),
-                                     br(),
-                                     br(),
-                                     plotOutput("heatmapTimeUp", height = "750px")
-                                 ),
-                                 conditionalPanel(
-                                     condition = 'input.plotType == "Venn"',
-                                     upsetjsOutput("upsetVenn"), #, click = "upsetClick"),
-                                     br(),
-                                     DT::dataTableOutput("clickedElementsVenn"),
-                                     br(),
-                                     br(),
-                                     plotOutput("heatmapTimeVenn", height = "750px")
-                                 ),
-                                 
-                             )
-                    ),
-                    tabPanel("Gene expression",
-                             sidebarPanel(
-                                 checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
-                                                    choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                                                    selected = NULL),
-                                 textInput("gene", label = h3("Gene input"), value = NULL),
-                                 downloadButton("downGeneX","Download plot"),
-                             ), 
-                             mainPanel(
-                                 plotOutput("geneX"),
-                                 br(),
-                                 #tableOutput("sig")
-                             )),
-                    tabPanel("Virus Comparison",
-                             sidebarPanel(
-                                 checkboxGroupInput("select", label = h5(strong("Select viruses")), 
-                                                    choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                                                    selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
-                                 sliderInput("LFCall",
-                                             h5(strong("LFC cutoff:")),
-                                             min = 0,
-                                             max = 10,
-                                             value = 1, 
-                                             step = 0.5),
-                                 sliderInput("limit",
-                                             h5(strong("Number of intersections:")),
-                                             min = 0,
-                                             max = 100,
-                                             value = 20, 
-                                             step = 5),
-                                 #br(),
-                                 br(),
-                                 h5(strong("Download table")),
-                                 downloadButton("downallCSV", "Download as csv"),
-                                 br(),
-                                 downloadButton("downallXLSX", "Download as xlsx")
-                             ),
-                             mainPanel(
-                                 upsetjsOutput("upsetAll"), #, click = "upsetClick"),
-                                 br(),
-                                 DT::dataTableOutput("clickedElementsAll"),
-                             )
-                    ),
-                    tabPanel("Heatmap",
-                             
-                             mainPanel(
-                                 downloadButton("downHeatAll", "Download heatmap"),
-                                 plotOutput("heatmapAll", height = 800)
-                                 
-                             ))
-        )
+        tabPanel("Upload",
+                 #sidebarPanel(
+                 #    fileInput("file", label = h5(br("File input")), multiple = T),
+                 #),
+                 mainPanel(
+                     h3("Upload files"),
+                     tableOutput("table")
+                 )
+        ),
+        tabPanel("Volcano Plot / MAPlot",
+                 sidebarPanel(
+                     htmlOutput("fileSelect"),
+                     radioButtons("plotTypeSingle", label = h5(strong("Displayed Plot")), choices = c("Volcano", "MAPlot"), selected = "Volcano"),
+                     sliderInput("LFCsingle",
+                                 h5(strong("LFC cutoff:")),
+                                 min = 0,
+                                 max = 10,
+                                 value = 1, 
+                                 step = 0.5),
+                     br(),
+                     #downloadButton("downSingle", "Download")
+                 ),
+                 mainPanel(
+                     conditionalPanel(
+                         condition = 'input.plotTypeSingle == "Volcano"',
+                         #d.V <- vector(),
+                         plotlyOutput("volcanoPlot", height = "500px"),
+                         br(),
+                         dataTableOutput("clickVP")
+                     ),
+                     conditionalPanel(
+                         condition = 'input.plotTypeSingle == "MAPlot"',
+                         plotlyOutput("MAPlot", height = "500px"),
+                         br(),
+                         dataTableOutput("clickMA")
+                     )
+                 )),
+        tabPanel("Compare time points",
+                 sidebarPanel(
+                     radioButtons("plotType", label = h5(strong("Displayed Plot")), choices = c("Venn", "UpSet"), selected = "Venn"),
+                     selectInput("select_v", label = h5(strong("Select virus")), 
+                                 choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                 selected = NULL),
+                     htmlOutput("selectTime"),
+                     sliderInput("LFC",
+                                 h5(strong("LFC cutoff:")),
+                                 min = 0,
+                                 max = 10,
+                                 value = 1, 
+                                 step = 0.5),
+                     actionButton("addHeat", "Show heatmap"),
+                     downloadButton("downHeatTime", "Download heatmap"),
+                     br(),
+                     br(),
+                     h5(strong("Download table")),
+                     downloadButton("down_vCSV", "Download as csv"),
+                     br(),
+                     downloadButton("down_vXLSX", "Download as xlsx")
+                 ),
+                 mainPanel(
+                     conditionalPanel(
+                         condition = 'input.plotType == "UpSet"',
+                         upsetjsOutput("upset"), #, click = "upsetClick"),
+                         br(),
+                         DT::dataTableOutput("clickedElements"),
+                         br(),
+                         br(),
+                         #plotOutput("heatmapTimeUp", height = "750px")
+                     ),
+                     conditionalPanel(
+                         condition = 'input.plotType == "Venn"',
+                         upsetjsOutput("upsetVenn"), #, click = "upsetClick"),
+                         br(),
+                         DT::dataTableOutput("clickedElementsVenn"),
+                         br(),
+                         br(),
+                         #plotOutput("heatmapTimeVenn", height = "750px")
+                     ),
+                     plotOutput("heatmapTime", height = "750px"),
+                     
+                 )
+        ),
+        tabPanel("Gene expression",
+                 sidebarPanel(
+                     checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
+                                        choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                        selected = NULL),
+                     textInput("gene", label = h3("Gene input"), value = NULL),
+                     downloadButton("downGeneX","Download plot"),
+                 ), 
+                 mainPanel(
+                     plotOutput("geneX", height = 1000),
+                     br(),
+                     #tableOutput("sig")
+                 )),
+        tabPanel("Virus Comparison",
+                 sidebarPanel(
+                     checkboxGroupInput("select", label = h5(strong("Select viruses")), 
+                                        choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                        selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
+                     checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
+                                        choices = c("infected"="Mock_.*h", "inactivated control"="24h_Vs_.*BPL", "uninfected control"="Mock_BPL")),
+                     sliderInput("LFCall",
+                                 h5(strong("LFC cutoff:")),
+                                 min = 0,
+                                 max = 10,
+                                 value = 1, 
+                                 step = 0.5),
+                     sliderInput("limit",
+                                 h5(strong("Number of intersections:")),
+                                 min = 0,
+                                 max = 100,
+                                 value = 20, 
+                                 step = 5),
+                     #br(),
+                     br(),
+                     h5(strong("Download table")),
+                     downloadButton("downallCSV", "Download as csv"),
+                     br(),
+                     downloadButton("downallXLSX", "Download as xlsx")
+                 ),
+                 mainPanel(
+                     upsetjsOutput("upsetAll"), #, click = "upsetClick"),
+                     br(),
+                     DT::dataTableOutput("clickedElementsAll"),
+                 )
+        ),
+        tabPanel("Heatmap",
+                 
+                 mainPanel(
+                     downloadButton("downHeatAll", "Download heatmap"),
+                     plotOutput("heatmapAll", height = 800)
+                     
+                 ))
     )
+)
 
-# Define server logic required to draw a histogram
+# Define directory containing data
+filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/csv/"
+files.list <- list.files(filedir, full.names = T)
+
+# Define server logic 
 server = function(input, output, session) {
-    datasetInput <- reactive({
-        infile <- input$file
-        if(is.null(infile))
-            return(NULL)
-        files.list <- list()
-        for(i in 1:length(input$file[,1])){
-            files.list[[i]] <- read.csv(input$file[[i,'datapath']], header = TRUE, stringsAsFactors = F, row.names = 1)
-            print(input$file[[i,'name']])
-            names(files.list)[i] <- sub("deseq2_results_(.*).csv","\\1",input$file[[i,'name']])
-        }
-        return(files.list)
+    # Read data
+    withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
+        datasetInput <- lapply(files.list, function(x){
+            f <- read.csv(x, header = TRUE, stringsAsFactors = F, row.names = 1)
+            incProgress(1/length(files.list))
+            return(f)
+        })
+        #Sys.sleep(5)
     })
+    names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
+    # datasetInput <- function(){
+    #     #reactive({
+    #     #infile <- input$file
+    #     # for(i in 1:length(input$file[,1])){
+    #     #     files.list[[i]] <- read.csv(input$file[[i,'datapath']], header = TRUE, stringsAsFactors = F, row.names = 1)
+    #     #     print(input$file[[i,'name']])
+    #     #     names(files.list)[i] <- sub("deseq2_results_(.*).csv","\\1",input$file[[i,'name']])
+    #     # }
+    #     infile <- list.files(filedir, full.names = T)
+    #     if(is.null(infile))
+    #         return(NULL)
+    #     files.list <- lapply(infile, function(x){
+    #         f <- read.csv(x, header = TRUE, stringsAsFactors = F, row.names = 1)
+    #     })
+    #     names(files.list) <- sub("deseq2_results_(.*).csv","\\1",basename(infile))
+    #     return(files.list)
+    # }
     
-    output$table = renderTable(
-        data.frame(names(datasetInput()))
+    output$table <- renderTable(
+        data.frame(names(datasetInput))
         , colnames = F, rownames = F)
     
-    
-    output$fileToPlot <- renderUI({
-        selectInput("file", label = "Choose file", choices = names(datasetInput()))
+    ## Volcano Plot / MAPlot
+    output$fileSelect <- renderUI({
+        selectInput("fileToPlot", label = "Choose file", choices = names(datasetInput))
     })
-    
-    observe({
-        updateSelectInput(
-            session, "fileToPlot",
-            choices = names(datasetInput())
-        )
-    })
-    
+            
     output$downSingle <- downloadHandler(
         filename = function(){
             return(paste0(input$fileToPlot, "_selected", ".csv"))},
@@ -281,7 +326,7 @@ server = function(input, output, session) {
         },
         contentType = "csv")
     
-    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL)
+    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL)
     
     observeEvent(input$fileToPlot,{
         data$d <- NULL
@@ -291,7 +336,7 @@ server = function(input, output, session) {
     })
     
     observeEvent(event_data("plotly_click", source = "V"), {
-        req(datasetInput())
+        req(datasetInput)
         req(input$fileToPlot)
         data$d <- event_data("plotly_click", source = "V")
         a <- data$dV
@@ -300,7 +345,7 @@ server = function(input, output, session) {
     })
     
     observeEvent(event_data("plotly_click", source = "M"), {
-        req(datasetInput())
+        req(datasetInput)
         req(input$fileToPlot)
         data$dM <- event_data("plotly_click", source = "M")
         a <- data$dfM
@@ -314,7 +359,7 @@ server = function(input, output, session) {
         if(is.null(d)){
             return(NULL)
         }else{
-            df <- datasetInput()[[input$fileToPlot]]
+            df <- datasetInput[[input$fileToPlot]]
             df <- df[d.V,c("SYMBOL","log2FoldChange","padj")]
             df$NCBI <- createLink(df$SYMBOL)
             return(df)
@@ -322,9 +367,9 @@ server = function(input, output, session) {
     }, escape = F)
     
     output$volcanoPlot <- renderPlotly({
-        if(is.null(datasetInput()) | is.null(input$fileToPlot))
+        if(is.null(datasetInput) | is.null(input$fileToPlot))
             return(NULL)
-        file.data <- datasetInput()[[input$fileToPlot]]
+        file.data <- datasetInput[[input$fileToPlot]]
         file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                                 ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
         p <- ggplot(file.data, aes(x = log2FoldChange, y = -log10(padj), color = col, text = SYMBOL)) +
@@ -346,7 +391,7 @@ server = function(input, output, session) {
         if(is.null(d)){
             return(NULL)
         }else{
-            df <- datasetInput()[[input$fileToPlot]]
+            df <- datasetInput[[input$fileToPlot]]
             df <- df[d.MA,c("SYMBOL","log2FoldChange","padj")]
             df$NCBI <- createLink(df$SYMBOL)
             return(df)
@@ -354,9 +399,9 @@ server = function(input, output, session) {
     }, escape = F)
     
     output$MAPlot <- renderPlotly({
-        if(is.null(datasetInput()) | is.null(input$fileToPlot))
+        if(is.null(datasetInput) | is.null(input$fileToPlot))
             return(NULL)
-        file.data <- datasetInput()[[input$fileToPlot]]
+        file.data <- datasetInput[[input$fileToPlot]]
         file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                                 ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
         p <- ggplot(file.data, aes(x = log2FoldChange, y = -log(padj), color = col, text = SYMBOL)) +
@@ -404,23 +449,50 @@ server = function(input, output, session) {
             }
         })
     
+    ## Compare time points
+    output$selectTime <- renderUI({
+        selectInput("time", label = "Choose times to plot", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]), multiple = TRUE)
+    })
+    
     observeEvent(input$select_v, {
         data$heat <- NULL   
+        data$dt <- NULL
     })
     
     observeEvent(input$addHeat, {
         data$heat <- 1
     })
     
+    output$downHeatTime <- downloadHandler(
+        filename = function(){
+            return(paste0(input$select_v, ".png"))},
+        content = function(f){
+            png(filename = f)
+            print(plot_heat_time())
+            dev.off()
+        }
+    )
     
-    output$heatmapTimeUp <- renderPlot({
+    output$heatmapTime <- renderPlot({
+        print(plot_heat_time())
+    })
+    
+    #
+    plot_heat_time <- reactive({
         h <- data$heat
-        if(is.null(input$select_v) | is.null(input$upset_click$elems) | is.null(h)){
+        click <- NULL
+        if(input$plotType=="UpSet"){
+            click <- input$upset_click$elems
+        }
+        if(input$plotType=="Venn"){
+            click <- input$upsetVenn_click$elems
+        }
+        if(is.null(input$select_v) | is.null(input$time) | is.null(click) | is.null(h)){
             return(NULL)
         }else{
-            data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput()[grep(paste(input$select_v, collapse = "|"), names(datasetInput()))]), function(x){
-                y <- datasetInput()[[x]]
-                y <- y[unlist(input$upset_click$elems), c("SYMBOL","log2FoldChange")]
+            data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
+                y <- datasetInput[[x]]
+                y <- y[unlist(click), c("SYMBOL","log2FoldChange")]
                 colnames(y) <- c("SYMBOL", x)
                 return(y)
             })
@@ -428,62 +500,77 @@ server = function(input, output, session) {
             data.df <- data.df[rowSums(is.na(data.df))!=ncol(data.df),]
             rownames(data.df) <- data.df$SYMBOL
             data.df <- data.df[,-1]
-            plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_row = 12)
+            data.df <- data.df[,mixedorder(colnames(data.df))]
+            plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_row = 10)
         }
     })
     
-    output$heatmapTimeVenn <- renderPlot({
-        h <- data$heat
-        if(is.null(input$select_v) | is.null(input$upsetVenn_click$elems) | is.null(h)){
-            return(NULL)
-        }else{
-            data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput()[grep(paste(input$select_v, collapse = "|"), names(datasetInput()))]), function(x){
-                y <- datasetInput()[[x]]
-                y <- y[unlist(input$upsetVenn_click$elems), c("SYMBOL","log2FoldChange")]
-                colnames(y) <- c("SYMBOL", x)
-                return(y)
-            })
-            )
-            data.df <- data.df[rowSums(is.na(data.df))!=ncol(data.df),]
-            rownames(data.df) <- data.df$SYMBOL
-            data.df <- data.df[,-1]
-            plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_row = 12)
-        }
-    }) 
+    observeEvent(input$plotType,{
+        data$dt <- NULL
+    })
+    
+    observeEvent(input$upset_click$elems,{
+        data$dt <- 1
+    })
+    
+    observeEvent(input$upsetVenn_click$elems,{
+        data$dt <- 1
+    })
     
     output$clickedElements <- renderDataTable({
-        data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
+        #if(input$plotType=="UpSet"){
+        dt <- data$dt
+        if(is.null(dt)){
+            data.frame("SYMBOL"=NULL, "LinkToNCBI"=NULL)
+        }else{
+            data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
+        }
+        #if(input$plotType=="Venn"){
+        #    data.frame("Symbol"=unlist(input$upsetVenn_click$elems), "LinkToNCBI" = createLink(unlist(input$upsetVenn_click$elems)))
+        #}
     }, escape = F)
     
     output$upset <- renderUpsetjs({
-        id.list <- lapply(datasetInput()[grep(input$select_v, names(datasetInput()))], function(x){
-            return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
-        })
-        id.list <- id.list[sapply(id.list, length) > 0]
-        #names(id.list) <- sub("Vs","Vs<br>",names(id.list))
-        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections %>% chartFontSizes(font.family = "sans", set.label = "8px") %>% interactiveChart()
+        if(is.null(input$select_v) | is.null(input$time)){
+            return(NULL)
+        }else{
+            id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
+                return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
+            })
+            id.list <- id.list[sapply(id.list, length) > 0]
+            #names(id.list) <- sub("Vs","Vs<br>",names(id.list))
+            upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections %>% chartFontSizes(font.family = "sans", set.label = "8px") %>% interactiveChart()
+        }
     })
     
     output$clickedElementsVenn <- renderDataTable({
-        data.frame("Symbol"=unlist(input$upsetVenn_click$elems), "LinkToNCBI" = createLink(unlist(input$upsetVenn_click$elems)))
+        dt <- data$dt
+        if(is.null(dt)){
+            return(NULL)
+        }else{
+            data.frame("Symbol"=unlist(input$upsetVenn_click$elems), "LinkToNCBI" = createLink(unlist(input$upsetVenn_click$elems)))
+        }
     }, escape = F)
     
     output$upsetVenn <- renderUpsetjs({
-        #if(!input$plotType=="Venn"){
-        id.list <- lapply(datasetInput()[grep(input$select_v, names(datasetInput()))], function(x){
-            return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
-        })
-        id.list <- id.list[sapply(id.list, length) > 0]
-        #names(id.list) <- sub("Vs","Vs<br>",names(id.list))
-        upsetjsVennDiagram() %>% fromList(id.list) %>% interactiveChart()
-        #}
+        if(is.null(input$select_v) | is.null(input$time)){
+            return(NULL)
+        }else{
+            id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
+                return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
+            })
+            id.list <- id.list[sapply(id.list, length) > 0]
+            #names(id.list) <- sub("Vs","Vs<br>",names(id.list))
+            upsetjsVennDiagram() %>% fromList(id.list) %>% interactiveChart()
+        }
     })
     
+    # Gene expression
     output$downGeneX <- downloadHandler(
         filename = function(){
             return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
         content = function(f){
-            ggsave(f, plot_geneX(), "png")
+            ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
         }
     )
     
@@ -495,14 +582,14 @@ server = function(input, output, session) {
         if(is.null(input$selectVirus) | is.null(input$gene)){
             return(NULL)
         }else{
-            lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput()[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput()))]), function(x){
-                x.df <- data.frame(datasetInput()[[x]]$SYMBOL,datasetInput()[[x]]$log2FoldChange)
+            lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+                x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$log2FoldChange)
                 colnames(x.df) <- c("SYMBOL",x)
                 return(x.df)}))
             rownames(lfc.df) <- lfc.df$SYMBOL
             lfc.df <- lfc.df[,-1]
-            padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput()[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput()))]), function(x){
-                x.df <- data.frame(datasetInput()[[x]]$SYMBOL,datasetInput()[[x]]$padj)
+            padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+                x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$padj)
                 colnames(x.df) <- c("SYMBOL",x)
                 return(x.df)}))
             rownames(padj.df) <- padj.df$SYMBOL
@@ -511,6 +598,7 @@ server = function(input, output, session) {
         }
     })
     
+    # Virus comparison
     output$downallCSV <- downloadHandler(
         filename = function(){
             return(paste0(paste(input$select, collapse = "_"), ".csv"))},
@@ -531,11 +619,11 @@ server = function(input, output, session) {
     }, escape = F)
     
     output$upsetAll <- renderUpsetjs({
-        if(is.null(input$select)){
+        if(is.null(input$select) | is.null(input$selectCond)){
             return(NULL)
         }else{
             id.list <- sapply(input$select,function(virus){
-                unique(unlist(lapply(datasetInput()[grep(virus, names(datasetInput()))], function(x){
+                unique(unlist(lapply(datasetInput[grep(paste(virus, input$selectCond, sep = ".*"), names(datasetInput))], function(x){
                     return(x[which(abs(x$log2FoldChange) > input$LFCall & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
                 })))
             }, USE.NAMES = T, simplify = F)
@@ -559,11 +647,11 @@ server = function(input, output, session) {
     })
     
     plot_heat_all <- reactive({
-        if(is.null(input$select) | is.null(input$upsetAll_click$elems)){
+        if(is.null(input$select) | is.null(input$selectCond) | is.null(input$upsetAll_click$elems)){
             return(NULL)
         }else{
-            data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput()[grep(paste(input$select, collapse = "|"), names(datasetInput()))]), function(x){
-                y <- datasetInput()[[x]]
+            data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste(input$select, input$selectCond, collapse = "|", sep = ".*"), names(datasetInput))]), function(x){
+                y <- datasetInput[[x]]
                 y <- y[unlist(input$upsetAll_click$elems), c("SYMBOL","log2FoldChange")]
                 colnames(y) <- c("SYMBOL", x)
                 return(y)
@@ -573,6 +661,7 @@ server = function(input, output, session) {
             data.df <- data.df[rowSums(is.na(data.df))!=ncol(data.df),]
             rownames(data.df) <- data.df$SYMBOL
             data.df <- data.df[,-1]
+            data.df <- data.df[,mixedorder(colnames(data.df))]
             plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_row = 12)
         }
     })
