@@ -128,7 +128,11 @@ ui <- fluidPage(
               font-size: 28px;
             }
            "
-            )
+            ),
+            "#uploadText{color: black;
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 }"
         )
     ),
     
@@ -143,8 +147,10 @@ ui <- fluidPage(
                  #    fileInput("file", label = h5(br("File input")), multiple = T),
                  #),
                  mainPanel(
-                     h3("Upload files"),
-                     tableOutput("table")
+                     textOutput("uploadText"),
+                     br(),
+                     tableOutput("table"),
+                     #h2("Uploaded files"),
                  )
         ),
         tabPanel("Volcano Plot / MAPlot",
@@ -281,6 +287,10 @@ files.list <- list.files(filedir, full.names = T)
 
 # Define server logic 
 server = function(input, output, session) {
+    
+    # define reactive values
+    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL)
+    
     # Read data
     withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
         datasetInput <- lapply(files.list, function(x){
@@ -291,23 +301,12 @@ server = function(input, output, session) {
         #Sys.sleep(5)
     })
     names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
-    # datasetInput <- function(){
-    #     #reactive({
-    #     #infile <- input$file
-    #     # for(i in 1:length(input$file[,1])){
-    #     #     files.list[[i]] <- read.csv(input$file[[i,'datapath']], header = TRUE, stringsAsFactors = F, row.names = 1)
-    #     #     print(input$file[[i,'name']])
-    #     #     names(files.list)[i] <- sub("deseq2_results_(.*).csv","\\1",input$file[[i,'name']])
-    #     # }
-    #     infile <- list.files(filedir, full.names = T)
-    #     if(is.null(infile))
-    #         return(NULL)
-    #     files.list <- lapply(infile, function(x){
-    #         f <- read.csv(x, header = TRUE, stringsAsFactors = F, row.names = 1)
-    #     })
-    #     names(files.list) <- sub("deseq2_results_(.*).csv","\\1",basename(infile))
-    #     return(files.list)
-    # }
+    
+    output$uploadText <- renderText({
+        if(!is.null(datasetInput)){
+            print("Uploaded data:")
+        }
+    })
     
     output$table <- renderTable(
         data.frame(names(datasetInput))
@@ -326,7 +325,6 @@ server = function(input, output, session) {
         },
         contentType = "csv")
     
-    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL)
     
     observeEvent(input$fileToPlot,{
         data$d <- NULL
