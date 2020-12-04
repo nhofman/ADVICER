@@ -17,6 +17,8 @@ library(plotly)
 library(pheatmap)
 library(gtools)
 library(openxlsx)
+library(vcfR)
+library(tidytext)
 
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1,
                         rowClust = T, colClust = T, fontsize_row = 0.8, fontsize_col = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,
@@ -272,11 +274,22 @@ ui <- fluidPage(
                  )
         ),
         tabPanel("Heatmap",
-                 
                  mainPanel(
                      downloadButton("downHeatAll", "Download heatmap"),
                      plotOutput("heatmapAll", height = 800)
                      
+                 )),
+        tabPanel("SNP analysis",
+                 sidebarPanel({
+                     selectInput("virusSNP", label = h5(strong("Select virus")), 
+                                 choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                 selected = NULL)
+                 }),
+                 mainPanel(
+                     #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
+                     #DT::dataTableOutput("SNPdata")
+                     plotlyOutput("heatSNP", height = "1000px"),
+                     #verbatimTextOutput("SNPdata")
                  ))
     )
 )
@@ -284,16 +297,19 @@ ui <- fluidPage(
 # Define directory containing data
 filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/csv/"
 files.list <- list.files(filedir, full.names = T)
+filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling/"
+vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
 server = function(input, output, session) {
     
     # define reactive values
-    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL)
+    data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL, snp=NULL)
     
     # Read data
     withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
         datasetInput <- lapply(files.list, function(x){
+            print(x)
             f <- read.csv(x, header = TRUE, stringsAsFactors = F, row.names = 1)
             incProgress(1/length(files.list))
             return(f)
@@ -301,6 +317,9 @@ server = function(input, output, session) {
         #Sys.sleep(5)
     })
     names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
+    
+    vcf.list <- lapply(vcf.files, read.vcfR)
+    names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
     
     output$uploadText <- renderText({
         if(!is.null(datasetInput)){
@@ -662,6 +681,57 @@ server = function(input, output, session) {
             data.df <- data.df[,mixedorder(colnames(data.df))]
             plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_row = 12)
         }
+    })
+    
+    # SNP analysis
+    output$heatSNP <- renderPlotly({
+        v <- input$virusSNP
+        v.df <- Reduce(rbind, sapply(names(vcf.list[grep(v, names(vcf.list))]), function(n){
+            x <- vcf.list[[n]]
+            x.df <- as.data.frame(x@fix, stringsAsFactors = F)[, c("CHROM", "POS", "REF", "ALT")]
+            if(nrow(x.df)>0){
+                x.df$AF <- extract.info(x, "AF", as.numeric = T)
+                x.df$DP <- extract.info(x, "DP", as.numeric = T)
+                x.df$Sample <- n
+                colnames(x.df) <- c("Segment", "POS", "REF", "ALT", "AF", "DP", "Sample")
+                x.df$snp <- paste(x.df$POS, x.df$ALT, sep = "_")
+                return(x.df)
+            }
+        }, simplify = F))
+        
+        x_break <- which(sub("_[1|2]$","",mixedsort(unique(v.df$Sample)))[-1] != sub("_[1|2]$","",mixedsort(unique(v.df$Sample)))[-length(sub("_[1|2]$","",mixedsort(unique(v.df$Sample))))])
+        v.sum <- v.df %>% group_by(Segment) %>% summarise(n_distinct(snp))
+        height <- ifelse(sum(v.sum[,2])>30, sum(v.sum[,2])*30, sum(v.sum[,2])*50)
+        
+        p <- ggplot(v.df, aes(x = factor(Sample, levels = mixedsort(unique(Sample))), y = reorder_within(snp, as.numeric(POS), Segment, fun = min), fill = AF, 
+                              text = paste("Reference: ",REF, "\nAlternative: ", ALT, "\nRead depth: ", DP, sep = ""))) + 
+            geom_tile(colour="white",size=0.25) + geom_vline(xintercept = x_break+0.5) +
+            scale_y_reordered() +
+            #facet_wrap(~ Segment, ncol = 1, scales = "free_y", strip.position = "right", drop = F) + 
+            facet_grid(vars(Segment), scales = "free_y") +
+            scale_fill_distiller(palette = "YlOrRd", direction = 1) +
+            labs(x = "", y = "", fill = "Frequency") + theme_classic(base_size = 9) +
+            scale_x_discrete(expand = c(0, 0)) +
+            theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
+                  legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15), axis.ticks = element_blank(),
+                  axis.title = element_text(size = 15, face = "bold", family = "sans"), axis.text.x = element_text(angle = 330, hjust = 0),
+                  plot.title = element_text(size = 20, family = "sans", face = "bold"), strip.text = element_text(size = 20, face = "bold"))
+            #theme(axis.ticks = element_blank(), axis.text = element_text(size = )) #, axis.text.x = theme_text(size = base_size * 0.8, angle = 330, hjust = 0, colour = "grey50"))
+        ggplotly(p, tooltip = c("AF","text"), height = height) #, height = sum(v.sum[,2])*10)
+        })
+    
+    observeEvent(event_data("plotly_click", source = "snp"), {
+        data$snp <- event_data("plotly_click", source = "snp")
+    })
+    
+    output$SNPdata <- renderPrint({
+        d <- data$snp
+        if(is.null(d)){
+            return(NULL)
+        }else{
+            return(d)
+        }
+        #print(input$SNPclick)
     })
 }
 
