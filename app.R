@@ -297,7 +297,7 @@ ui <- fluidPage(
 # Define directory containing data
 filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/csv/"
 files.list <- list.files(filedir, full.names = T)
-filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling/"
+filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling_new/"
 vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -683,6 +683,18 @@ server = function(input, output, session) {
         }
     })
     
+    vline <- function(x = 0, color = "black") {
+        list(
+            type = "line", 
+            y0 = 0, 
+            y1 = 1, 
+            yref = "paper",
+            x0 = x, 
+            x1 = x, 
+            line = list(color = color)
+        )
+    }
+    
     # SNP analysis
     output$heatSNP <- renderPlotly({
         v <- input$virusSNP
@@ -691,7 +703,7 @@ server = function(input, output, session) {
             x.df <- as.data.frame(x@fix, stringsAsFactors = F)[, c("CHROM", "POS", "REF", "ALT")]
             if(nrow(x.df)>0){
                 x.df$AF <- extract.info(x, "AF", as.numeric = T)
-                x.df$DP <- extract.info(x, "DP", as.numeric = T)
+                x.df$DP <- extract.info(x, "DP", as.numeric = F)
                 x.df$Sample <- n
                 colnames(x.df) <- c("Segment", "POS", "REF", "ALT", "AF", "DP", "Sample")
                 x.df$snp <- paste(x.df$POS, x.df$ALT, sep = "_")
@@ -702,37 +714,56 @@ server = function(input, output, session) {
         x_break <- which(sub("_[1|2]$","",mixedsort(unique(v.df$Sample)))[-1] != sub("_[1|2]$","",mixedsort(unique(v.df$Sample)))[-length(sub("_[1|2]$","",mixedsort(unique(v.df$Sample))))])
         v.sum <- v.df %>% group_by(Segment) %>% summarise(n_distinct(snp))
         height <- ifelse(sum(v.sum[,2])>30, sum(v.sum[,2])*30, sum(v.sum[,2])*50)
+        palette <- colorRampPalette(c("white","yellow", "orange", "red", "darkred"))
         
-        p <- ggplot(v.df, aes(x = factor(Sample, levels = mixedsort(unique(Sample))), y = reorder_within(snp, as.numeric(POS), Segment, fun = min), fill = AF, 
-                              text = paste("Reference: ",REF, "\nAlternative: ", ALT, "\nRead depth: ", DP, sep = ""))) + 
-            geom_tile(colour="white",size=0.25) + geom_vline(xintercept = x_break+0.5) +
-            scale_y_reordered() +
-            #facet_wrap(~ Segment, ncol = 1, scales = "free_y", strip.position = "right", drop = F) + 
-            facet_grid(vars(Segment), scales = "free_y") +
-            scale_fill_distiller(palette = "YlOrRd", direction = 1) +
-            labs(x = "", y = "", fill = "Frequency") + theme_classic(base_size = 9) +
-            scale_x_discrete(expand = c(0, 0)) +
-            theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
-                  legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15), axis.ticks = element_blank(),
-                  axis.title = element_text(size = 15, face = "bold", family = "sans"), axis.text.x = element_text(angle = 330, hjust = 0),
-                  plot.title = element_text(size = 20, family = "sans", face = "bold"), strip.text = element_text(size = 20, face = "bold"))
-            #theme(axis.ticks = element_blank(), axis.text = element_text(size = )) #, axis.text.x = theme_text(size = base_size * 0.8, angle = 330, hjust = 0, colour = "grey50"))
-        ggplotly(p, tooltip = c("AF","text"), height = height) #, height = sum(v.sum[,2])*10)
+        p <- lapply(mixedsort(unique(v.df$Segment)), function(x){
+            v.df.mod <- v.df[v.df$Segment==x,]
+            v.df.mod$snp <- factor(v.df.mod$snp, levels = mixedsort(unique(v.df.mod$snp)))
+            v.df.mod$Sample <- factor(v.df.mod$Sample, levels = mixedsort(unique(v.df$Sample)))
+            
+            v.df.split <- split(v.df.mod[,c("snp","AF")], v.df.mod$Sample)
+            v.df.mat <- Reduce(function(x,y)merge(x,y,by="snp",all=T,no.dups=F),v.df.split)
+            colnames(v.df.mat) <- c("snp",names(v.df.split))
+            rownames(v.df.mat) <- v.df.mat$snp
+            v.df.mat <- as.matrix(v.df.mat[,-1])
+            v.df.mat[is.na(v.df.mat)] <- 0
+            
+            
+            #create matrix with hoverinfo per sample and snp
+            hover <- matrix(ncol = length(levels(v.df.mod$Sample)), nrow = length(unique(v.df.mod$snp)))
+            colnames(hover) <- levels(v.df.mod$Sample)
+            rownames(hover) <- mixedsort(unique(v.df.mod$snp))
+            for(i in unique(v.df.mod$snp)){
+                for(s in unique(v.df.mod$Sample)){
+                    if(nrow(v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, ]) > 0){
+                        hover[i,s] <- sprintf("Sample: %s<br />Position: %s<br />Reference: %s<br />Alternative: %s<br />Frequency: %s<br />Depth: %s", 
+                                              s, v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "POS"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "REF"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "ALT"], 
+                                              v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "AF"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "DP"])
+                    }else{
+                        hover[i,s] <- NA
+                    }
+                }
+            }
+            
+            plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z=v.df.mat, type = "heatmap", colors = palette(50), showlegend = F, zmin = 0, zmax = 1, zauto = F,
+                    text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
+                layout(shapes=lapply(x_break-0.5, vline)) %>% 
+                add_annotations(
+                    text = x,
+                    x = 0.5,
+                    y = 1,
+                    yref = "paper",
+                    xref = "paper",
+                    xanchor = "left",
+                    yanchor = "bottom",
+                    showarrow = FALSE,
+                    font = list(size = 15)
+                )
         })
-    
-    observeEvent(event_data("plotly_click", source = "snp"), {
-        data$snp <- event_data("plotly_click", source = "snp")
+        subplot(p, shareX = T, nrows = length(unique(v.df$Segment)))
+        
     })
     
-    output$SNPdata <- renderPrint({
-        d <- data$snp
-        if(is.null(d)){
-            return(NULL)
-        }else{
-            return(d)
-        }
-        #print(input$SNPclick)
-    })
 }
 
 # Run the application 
