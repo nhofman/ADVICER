@@ -303,7 +303,7 @@ vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 # Define server logic 
 server = function(input, output, session) {
     
-    # define reactive values
+    # Define reactive values
     data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, dt=NULL, snp=NULL)
     
     # Read data
@@ -315,11 +315,11 @@ server = function(input, output, session) {
             return(f)
         })
         #Sys.sleep(5)
+            names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
+            
+            vcf.list <- lapply(vcf.files, read.vcfR)
+            names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
     })
-    names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
-    
-    vcf.list <- lapply(vcf.files, read.vcfR)
-    names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
     
     output$uploadText <- renderText({
         if(!is.null(datasetInput)){
@@ -335,7 +335,8 @@ server = function(input, output, session) {
     output$fileSelect <- renderUI({
         selectInput("fileToPlot", label = "Choose file", choices = names(datasetInput))
     })
-            
+    
+    # download results        
     output$downSingle <- downloadHandler(
         filename = function(){
             return(paste0(input$fileToPlot, "_selected", ".csv"))},
@@ -344,7 +345,7 @@ server = function(input, output, session) {
         },
         contentType = "csv")
     
-    
+    # set plotly_click to NULL on input change
     observeEvent(input$fileToPlot,{
         data$d <- NULL
         data$dV <- NULL
@@ -352,6 +353,7 @@ server = function(input, output, session) {
         data$dfM <- NULL
     })
     
+    # save clicked elements to vector
     observeEvent(event_data("plotly_click", source = "V"), {
         req(datasetInput)
         req(input$fileToPlot)
@@ -370,6 +372,7 @@ server = function(input, output, session) {
         data$dfM <- a
     })
     
+    # display table of clicked elements and associated LFC and padj in Volcano plot
     output$clickVP <- renderDataTable({
         d <- data$d
         d.V <- data$dV
@@ -383,6 +386,7 @@ server = function(input, output, session) {
         }
     }, escape = F)
     
+    # plot Volcano plot of selected sample
     output$volcanoPlot <- renderPlotly({
         if(is.null(datasetInput) | is.null(input$fileToPlot))
             return(NULL)
@@ -402,6 +406,7 @@ server = function(input, output, session) {
         return(p)
     })
     
+    # display table of clicked elements and associated LFC and padj in MA plot
     output$clickMA <- renderDataTable({
         d <- data$dM
         d.MA <- data$dfM
@@ -415,6 +420,7 @@ server = function(input, output, session) {
         }
     }, escape = F)
     
+    # plot MA plot of selected sample
     output$MAPlot <- renderPlotly({
         if(is.null(datasetInput) | is.null(input$fileToPlot))
             return(NULL)
@@ -433,6 +439,8 @@ server = function(input, output, session) {
         p %>% layout(legend = list(orientation = "h", y = -0.2))
     })
     
+    ## Compare time points of defined virus
+    # download genes of selected plot area as csv or xlsx
     output$down_vCSV <- downloadHandler(
         filename = function(){
             if(input$plotType == "UpSet"){
@@ -466,20 +474,27 @@ server = function(input, output, session) {
             }
         })
     
-    ## Compare time points
+    # select times to plot
     output$selectTime <- renderUI({
         selectInput("time", label = "Choose times to plot", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]), multiple = TRUE)
     })
     
+    # set heatmap to NULL at selecion of new virus
     observeEvent(input$select_v, {
         data$heat <- NULL   
         data$dt <- NULL
     })
     
+    # add heatnmap
     observeEvent(input$addHeat, {
         data$heat <- 1
     })
     
+    output$heatmapTime <- renderPlot({
+        print(plot_heat_time())
+    })
+    
+    # download heatmap
     output$downHeatTime <- downloadHandler(
         filename = function(){
             return(paste0(input$select_v, ".png"))},
@@ -490,11 +505,7 @@ server = function(input, output, session) {
         }
     )
     
-    output$heatmapTime <- renderPlot({
-        print(plot_heat_time())
-    })
-    
-    #
+    # plot heatmap
     plot_heat_time <- reactive({
         h <- data$heat
         click <- NULL
@@ -522,6 +533,7 @@ server = function(input, output, session) {
         }
     })
     
+    # clear data table if plot type changes
     observeEvent(input$plotType,{
         data$dt <- NULL
     })
@@ -534,6 +546,7 @@ server = function(input, output, session) {
         data$dt <- 1
     })
     
+    # display table with elements in clicked plot area of UpSet plot
     output$clickedElements <- renderDataTable({
         #if(input$plotType=="UpSet"){
         dt <- data$dt
@@ -547,6 +560,7 @@ server = function(input, output, session) {
         #}
     }, escape = F)
     
+    # plot UpSet plot of selected virus und times
     output$upset <- renderUpsetjs({
         if(is.null(input$select_v) | is.null(input$time)){
             return(NULL)
@@ -560,6 +574,7 @@ server = function(input, output, session) {
         }
     })
     
+    # display table with elements in clicked plot area of Venn plot
     output$clickedElementsVenn <- renderDataTable({
         dt <- data$dt
         if(is.null(dt)){
@@ -569,6 +584,7 @@ server = function(input, output, session) {
         }
     }, escape = F)
     
+    # plot Venn diagram of selected virus und times
     output$upsetVenn <- renderUpsetjs({
         if(is.null(input$select_v) | is.null(input$time)){
             return(NULL)
@@ -582,7 +598,8 @@ server = function(input, output, session) {
         }
     })
     
-    # Gene expression
+    ## Gene expression plot
+    # download gene expression plot
     output$downGeneX <- downloadHandler(
         filename = function(){
             return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
@@ -591,6 +608,7 @@ server = function(input, output, session) {
         }
     )
     
+    # plot gene expression of selected viruses over time
     output$geneX <- renderPlot({
         print(plot_geneX())
     })
@@ -615,7 +633,8 @@ server = function(input, output, session) {
         }
     })
     
-    # Virus comparison
+    ## Virus comparison
+    # download genes of selected plot area as csv or xlsx
     output$downallCSV <- downloadHandler(
         filename = function(){
             return(paste0(paste(input$select, collapse = "_"), ".csv"))},
@@ -631,10 +650,12 @@ server = function(input, output, session) {
             write.xlsx(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
         })
     
+    # display table of genes in selected area
     output$clickedElementsAll <- renderDataTable({
         data.frame("Symbol"=unlist(input$upsetAll_click$elems), "Link" = createLink(unlist(input$upsetAll_click$elems)))
     }, escape = F)
     
+    # plot UpSet plot with selected viruses and conditions
     output$upsetAll <- renderUpsetjs({
         if(is.null(input$select) | is.null(input$selectCond)){
             return(NULL)
@@ -649,6 +670,7 @@ server = function(input, output, session) {
         }
     })
     
+    # download heatmap
     output$downHeatAll <- downloadHandler(
         filename = function(){
             return(paste0(paste(input$select, collapse = "_"), ".png"))},
@@ -659,6 +681,7 @@ server = function(input, output, session) {
         }
     )
     
+    # plot heatmap of genes in selected area
     output$heatmapAll <- renderPlot({
         print(plot_heat_all())
     })
@@ -683,6 +706,8 @@ server = function(input, output, session) {
         }
     })
     
+    ## SNP analysis
+    # add vertical line to plot
     vline <- function(x = 0, color = "black") {
         list(
             type = "line", 
@@ -695,7 +720,7 @@ server = function(input, output, session) {
         )
     }
     
-    # SNP analysis
+    # plot SNPs for selected  virus as heatmap
     output$heatSNP <- renderPlotly({
         v <- input$virusSNP
         v.df <- Reduce(rbind, sapply(names(vcf.list[grep(v, names(vcf.list))]), function(n){
@@ -716,6 +741,7 @@ server = function(input, output, session) {
         height <- ifelse(sum(v.sum[,2])>30, sum(v.sum[,2])*30, sum(v.sum[,2])*50)
         palette <- colorRampPalette(c("white","yellow", "orange", "red", "darkred"))
         
+        # create plotly heatmap for each segment
         p <- lapply(mixedsort(unique(v.df$Segment)), function(x){
             v.df.mod <- v.df[v.df$Segment==x,]
             v.df.mod$snp <- factor(v.df.mod$snp, levels = mixedsort(unique(v.df.mod$snp)))
