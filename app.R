@@ -19,6 +19,7 @@ library(gtools)
 library(openxlsx)
 library(vcfR)
 library(tidytext)
+library(dplyr)
 
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1,
                         rowClust = T, colClust = T, fontsize_row = 0.8, fontsize_col = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,
