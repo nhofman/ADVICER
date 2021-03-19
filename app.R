@@ -87,17 +87,17 @@ plotExpression <- function(expr.df, padj.df, gene){
     #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
     #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
     lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
-    lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "uninfected", ifelse(grepl("BPL",lfc.gene$time), "inactivated", sub("Mock_","",lfc.gene$time)))
+    lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
     lfc.min <- min(lfc.gene$symbol)
     lfc.max <- max(lfc.gene$symbol) + 0.25
-    p1 <- ggplot(lfc.gene[grepl("h",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=symbol, group=group, color=group)) + geom_line() + geom_point() +
+    p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=symbol, group=group, color=group)) + geom_line() + geom_point() +
         labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
         geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
         theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
               legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
               axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
         theme(plot.margin = unit(c(1,1,1,1), "cm"))
-    p2 <-  ggplot(lfc.gene[!grepl("h",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
+    p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
         labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
         geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
         theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
@@ -141,7 +141,7 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     navbarPage(
         "DGE analysis", 
-        tabPanel("Download",
+        tabPanel("Download data",
                  #sidebarPanel(
                  #    fileInput("file", label = h5(br("File input")), multiple = T),
                  #),
@@ -516,7 +516,7 @@ server = function(input, output, session) {
     
     # select times to plot
     output$selectTime <- renderUI({
-        checkboxGroupInput("time", label = "Choose times to plot (max. 5)", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
+        checkboxGroupInput("time", label = "Choose times to plot (for Venn: max. 5)", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
     })
     
     # set heatmap to NULL at selecion of new virus
