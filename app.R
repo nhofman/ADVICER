@@ -141,15 +141,19 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     navbarPage(
         "DGE analysis", 
-        tabPanel("Upload",
+        tabPanel("Download",
                  #sidebarPanel(
                  #    fileInput("file", label = h5(br("File input")), multiple = T),
                  #),
-                 mainPanel(
-                     textOutput("uploadText"),
-                     br(),
-                     tableOutput("table"),
+                 sidebarPanel(
+                     #textOutput("uploadText"),
+                     #br(),
+                     htmlOutput("download"),
+                     #tableOutput("table"),
                      #h2("Uploaded files"),
+                 ),
+                 mainPanel(
+                     downloadButton("filesDown", "Download selected files")
                  )
         ),
         tabPanel("Volcano Plot / MAPlot",
@@ -294,11 +298,11 @@ ui <- fluidPage(
 )
 
 # Define directory containing data
-filedir <- "/data"
+#filedir <- "/data"
 #filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
-#filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
+filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
-filedir.vcf <- "/data"
+filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling_new/" #"/data"
 vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -321,6 +325,11 @@ server = function(input, output, session) {
         names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
     })
     
+    datasetInput <- lapply(datasetInput, function(x){
+        x[,c(5:ncol(x))] <- signif(x[,c(5:ncol(x))], 4)
+        return(x)
+    })
+    
     output$uploadText <- renderText({
         if(!is.null(datasetInput)){
             print("Uploaded data:")
@@ -330,6 +339,31 @@ server = function(input, output, session) {
     output$table <- renderTable(
         data.frame(names(datasetInput))
         , colnames = F, rownames = F)
+    
+    output$download <- renderUI({
+        checkboxGroupInput("filesToDown", "Choose files to download", as.list(c("all",names(datasetInput))))
+    })
+    
+    output$filesDown <- downloadHandler(
+        filename = function(){
+            "data.zip"
+        },
+        content = function(f){
+            files <- NULL
+            if(input$filesToDown=="all"){
+                files <- files.list
+            }else{
+                for (i in input$filesToDown){
+                    #write each sheet to a csv file, save the name
+                    fileName <- files.list[grep(i,files.list)] #paste(i,".csv",sep = "")
+                    #write.table(datasetInput[i],fileName,sep = ',', row.names = F, col.names = T)
+                    files <- c(files,fileName)
+                }
+            }
+            zip(f, files)
+        },
+      contentType = "csv"
+    )
     
     ## Volcano Plot / MAPlot
     output$fileSelect <- renderUI({
@@ -482,7 +516,7 @@ server = function(input, output, session) {
     
     # select times to plot
     output$selectTime <- renderUI({
-        checkboxGroupInput("time", label = "Choose times to plot", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
+        checkboxGroupInput("time", label = "Choose times to plot (max. 5)", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
     })
     
     # set heatmap to NULL at selecion of new virus
@@ -516,8 +550,8 @@ server = function(input, output, session) {
             data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
                 y <- datasetInput[[x]]
                 #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
-                y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange")]
-                colnames(y) <- c("SYMBOL", x)
+                y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj")]
+                colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
                 return(y)
             })
             )
@@ -539,15 +573,21 @@ server = function(input, output, session) {
             data.df <- data.df[,-c(1,ncol(data.df))]
             data.df <- apply(data.df,2,as.numeric)
             rownames(data.df) <- data.rows
+            data.df <- data.df[,c(TRUE, FALSE)]
+            colnames(data.df) <- sub(".LFC","",colnames(data.df))
             hover <- matrix(ncol = ncol(data.df), nrow = nrow(data.df))
             colnames(hover) <- colnames(data.df)
             rownames(hover) <- rownames(data.df)
             for(i in rownames(hover)){
                 for(s in colnames(hover)){
                     dataset <- datasetInput[[s]]
+                    s.gr <- sub("_.*","",strsplit(s,"_Vs_")[[1]])
+                    count.1 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[1]), colnames(dataset))], collapse = "; ")
+                    count.2 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[2]), colnames(dataset))], collapse = "; ")
                     if(i %in% dataset$SYMBOL){
-                        hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
-                                          i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"])
+                        hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
+                                          i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"],
+                                          s.gr[1], count.1, s.gr[2], count.2)
                     #paste(colnames(df), df, sep = ":", collapse = "\n"))
                     }else{
                         hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
@@ -678,8 +718,8 @@ server = function(input, output, session) {
         data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste(as.vector(outer(input$select, cond, paste, sep=".*")), collapse = "|"), names(datasetInput), perl = T)]), function(x){
             y <- datasetInput[[x]]
             #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
-            y <- y[y$SYMBOL %in% gene_id, c("SYMBOL","log2FoldChange")]
-            colnames(y) <- c("SYMBOL", x)
+            y <- y[y$SYMBOL %in% gene_id, c("SYMBOL","log2FoldChange", "padj")]
+            colnames(y) <- c("SYMBOL", paste0(x, ".LFC"), paste0(x,".padj"))
             return(y)
         })
         )
@@ -765,6 +805,8 @@ server = function(input, output, session) {
             data <- all.df()
             data.rows <- data$SYMBOL
             data <- data[,-c(1,ncol(data))]
+            data <- data[,c(TRUE, FALSE)]
+            colnames(data) <- sub(".LFC","",colnames(data))
             #for(i in 1:ncol(data)){
             #    data[,i] <- sub("-", NA, data[,i])
             #}
@@ -777,10 +819,13 @@ server = function(input, output, session) {
             for(i in rownames(hover)){
                 for(s in colnames(hover)){
                     dataset <- datasetInput[[s]]
-                    df <- paste(dataset[dataset$SYMBOL==i, grep("normalized.*", colnames(dataset))], collapse = ",")
+                    s.gr <- sub("_.*","",strsplit(s,"_Vs_")[[1]])
+                    count.1 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[1]), colnames(dataset))], collapse = "; ")
+                    count.2 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[2]), colnames(dataset))], collapse = "; ")
                     if(i %in% dataset$SYMBOL){
-                        hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
-                                              i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"])
+                        hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
+                                              i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"],
+                                              s.gr[1], count.1, s.gr[2], count.2)
                         #paste(colnames(df), df, sep = ":", collapse = "\n"))
                     }else{
                         hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
@@ -857,7 +902,7 @@ server = function(input, output, session) {
                 }
             }
             
-            plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z=v.df.mat, type = "heatmap", colors = palette(50), showlegend = F, zmin = 0, zmax = 1, zauto = F,
+            plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z=v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
                     text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
                 layout(shapes=lapply(x_break-0.5, vline)) %>% 
                 add_annotations(
