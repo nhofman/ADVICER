@@ -303,12 +303,11 @@ ui <- fluidPage(
 # Define directory containing data
 #filedir <- "/data"
 #filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
-filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
-#args <- commandArgs(F)
-#filedir <- args[match('--csv', args) + 1]
+filedir <- getShinyOption("filedir")
+#filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
-filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling_new/" #"/data"
-#filedir.vcf <- args[match('--vcf', args) + 1]
+filedir.vcf <- getShinyOption("filedirvcf")
+#filedir.vcf <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/variant_analyses/variant_calling/" #"/home/nina/Documents/Virus_project/variant_calling_new/" #"/data"
 vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -473,7 +472,7 @@ server = function(input, output, session) {
             theme(legend.position = "bottom", legend.direction = "horizontal", axis.title = element_text(size = 16, face = "bold"), axis.text = element_text(size = 16, face = "bold"))
         #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
         p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
-                     mode = "markers", marker = list(size = 10), customdata = ~SYMBOL,
+                     mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                      text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
                      source = "M")
         p %>% layout(legend = list(orientation = "h", y = -0.2))
@@ -915,7 +914,7 @@ server = function(input, output, session) {
                 }
             }
             
-            plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z=v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
+            plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z = v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
                     text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
                 layout(shapes=lapply(x_break-0.5, vline)) %>% 
                 add_annotations(
