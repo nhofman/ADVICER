@@ -248,9 +248,12 @@ ui <- fluidPage(
                                         choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                         selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
                      htmlOutput("selectCond"),
+                     em("(BPL samples were taken after 24h)"),
                      #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
                      #                   choices = list("")),
                                         #choices = c("infected"="Mock_.*h", "inactivated control"="24h_Vs_.*BPL", "uninfected control"="Mock_BPL")),
+                     br(),
+                     br(),
                      sliderInput("LFCall",
                                  h5(strong("LFC cutoff:")),
                                  min = 0,
@@ -301,8 +304,11 @@ ui <- fluidPage(
 #filedir <- "/data"
 #filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
 filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
+#args <- commandArgs(F)
+#filedir <- args[match('--csv', args) + 1]
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
 filedir.vcf <- "/home/nina/Documents/Virus_project/variant_calling_new/" #"/data"
+#filedir.vcf <- args[match('--vcf', args) + 1]
 vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -708,7 +714,14 @@ server = function(input, output, session) {
     
     # select time points to include in comparison
     output$selectCond <- renderUI({
-        checkboxGroupInput("cond", label = "Choose times to include", choices = unique(sapply(unique(sub(".*Vs","Vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
+        checkboxGroupInput("cond", label = "Choose times to include", 
+                           choices = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
+                                                   function(x){
+                                                     s <- ifelse(grepl("Mock",x), x, sub("Vs_.*_","Vs_Virus_",x))
+                                                     s <- sub("_Vs_", " : ", s)
+                                                     s <- sub("48h$", "48h (HCV only)", s)
+                                                     return(s)
+                                                     }, USE.NAMES = F)))
     })
     
     all.df <- reactive({
