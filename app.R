@@ -110,10 +110,12 @@ plotExpression <- function(expr.df, padj.df, gene){
     gridExtra::grid.arrange(p1, p2, ncol = 1, heights = c(10, 10))
 }
 
-datasetInput <- NULL
-#d.V <- vector()
-#d.MA <- vector()
+#readRenviron(".Renviron")
+if(Sys.getenv("DATADIR") != ""){
+  shinyOptions(filedir = Sys.getenv("DATADIR"))
+}
 
+datasetInput <- NULL
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     tags$head(
@@ -306,9 +308,9 @@ ui <- fluidPage(
 filedir <- getShinyOption("filedir")
 #filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
-filedir.vcf <- getShinyOption("filedirvcf")
-#filedir.vcf <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/variant_analyses/variant_calling/" #"/home/nina/Documents/Virus_project/variant_calling_new/" #"/data"
-vcf.files <- list.files(filedir.vcf, pattern = ".*[1|2].vcf", full.names = T)
+#filedir.vcf <- getShinyOption("filedirvcf")
+#filedir.vcf <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/variant_analyses/variant_calling/" #"/home/nina/Documents/Virus_project/variant_calling_new/" #"/data" 
+vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
 server = function(input, output, session) {
