@@ -14,6 +14,10 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("pheatmap"); \
                 install.packages("gtools"); \
                 install.packages("openxlsx"); \
+                install.packages("vcfR"); \
+                install.packages("tidytext"); \
+                install.packages("dplyr"); \
+                install.packages("heatmaply"); \
                 '
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
