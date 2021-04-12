@@ -716,13 +716,14 @@ server = function(input, output, session) {
     # select time points to include in comparison
     output$selectCond <- renderUI({
         checkboxGroupInput("cond", label = "Choose times to include", 
-                           choices = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
+                           choiceNames = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
                                                    function(x){
                                                      s <- ifelse(grepl("Mock",x), x, sub("Vs_.*_","Vs_Virus_",x))
                                                      s <- sub("_Vs_", " : ", s)
                                                      s <- sub("48h$", "48h (HCV only)", s)
                                                      return(s)
-                                                     }, USE.NAMES = F)))
+                                                     }, USE.NAMES = F)),
+                           choiceValues = unique(sapply(unique(sub(".*Vs","Vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
     })
     
     all.df <- reactive({
