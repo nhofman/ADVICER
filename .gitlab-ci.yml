@@ -1,0 +1,9 @@
+build_image:
+  only:
+    - tags
+  tags:
+    - ninavirus
+  script:
+    - echo $HARBOR_PASSWORD | docker login --password-stdin -u $HARBOR_USER harbor.computational.bio.uni-giessen.de
+    - docker build -t harbor.computational.bio.uni-giessen.de/virusapp/server:$CI_COMMIT_TAG .
+    - docker push harbor.computational.bio.uni-giessen.de/virusapp/server:$CI_COMMIT_TAG 
