@@ -47,6 +47,7 @@ spec:
         - image: harbor.computational.bio.uni-giessen.de/virusapp/server:1.1.3
           env:
             - name: DataBasePath
+
               value: /data
           volumeMounts:
             - name: config

@@ -19,7 +19,9 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("dplyr"); \
                 install.packages("heatmaply"); \
                 '
+
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
 # Add the virus app
+COPY env/Renviron /home/shiny/.Renviron
 COPY app.R /srv/shiny-server/
