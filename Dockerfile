@@ -4,11 +4,12 @@ LABEL maintainer=TODO
 LABEL description=TODO
 LABEL version=TODO
 
-RUN Rscript -e 'install.packages("shiny"); \
+RUN Rscript -e 'package_upset = "https://cran.r-project.org/package=upsetjs&version=1.6.0"; \
+                install.packages(package_upset); \
+                install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
                 install.packages("UpSetR"); \
-                install.versions("upsetjs", "1.6.0"); \
                 install.packages("ggplot2"); \
                 install.packages("plotly"); \
                 install.packages("pheatmap"); \
