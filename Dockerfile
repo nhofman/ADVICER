@@ -8,7 +8,7 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
                 install.packages("UpSetR"); \
-                install.packages("upsetjs"); \
+                install.versions("upsetjs", "1.6.0"); \
                 install.packages("ggplot2"); \
                 install.packages("plotly"); \
                 install.packages("pheatmap"); \
