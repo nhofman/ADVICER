@@ -4,8 +4,7 @@ LABEL maintainer=TODO
 LABEL description=TODO
 LABEL version=TODO
 
-RUN Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
-                install.packages("shiny"); \
+RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
                 install.packages("UpSetR"); \
@@ -18,6 +17,7 @@ RUN Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive
                 install.packages("tidytext"); \
                 install.packages("dplyr"); \
                 install.packages("heatmaply"); \
+                install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
                 '
 
 # Delete default sample app
