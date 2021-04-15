@@ -4,7 +4,7 @@ LABEL maintainer=TODO
 LABEL description=TODO
 LABEL version=TODO
 
-RUN Rscript -e 'install.packages(“https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type=”source”); \
+RUN Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
                 install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
