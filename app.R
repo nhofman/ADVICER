@@ -309,7 +309,8 @@ filedir <- getShinyOption("filedir")
 #filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
 #filedir.vcf <- getShinyOption("filedirvcf")
-#filedir.vcf <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/variant_analyses/variant_calling/" #"/home/nina/Documents/Virus_project/variant_calling_new/" #"/data" 
+#filedir.vcf <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/variant_analyses/variant_calling/" 
+#filedir <- "/home/nina/Documents/Virus_project/variant_calling_new/" #"/data" 
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -507,7 +508,7 @@ server = function(input, output, session) {
             }
         },
         content = function(f){
-            write.csv(virus.df(), f, row.names = F)
+            write.xlsx(virus.df(), f)
         })
     
     # download heatmap
@@ -523,7 +524,16 @@ server = function(input, output, session) {
     
     # select times to plot
     output$selectTime <- renderUI({
-        checkboxGroupInput("time", label = "Choose times to plot (for Venn: max. 5)", choices = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
+        checkboxGroupInput("time", label = "Choose times to plot (for Venn: max. 5)",
+                           choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
+                                         function(x){
+                                           s <- sub("^[^_]*_","",x)
+                                           s <- ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
+                                           #  s <- sub("_Vs_", " : ", s)
+                                           #s <- sub("48h$", "48h (HCV only)", s)
+                                           return(s)
+                                         }, USE.NAMES = F)),
+                           choiceValues = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
     })
     
     # set heatmap to NULL at selecion of new virus
