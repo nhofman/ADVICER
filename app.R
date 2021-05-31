@@ -6,6 +6,7 @@
 #
 #    http://shiny.rstudio.com/
 #
+#
 
 library(shiny)
 library(DT)
@@ -21,6 +22,7 @@ library(vcfR)
 library(tidytext)
 library(dplyr)
 library(heatmaply)
+
 
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1, setWidth = F,
                         rowClust = T, colClust = T, fontsize_r = 0.8, fontsize_c = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,

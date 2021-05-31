@@ -8,14 +8,20 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
                 install.packages("UpSetR"); \
-                install.packages("upsetjs"); \
                 install.packages("ggplot2"); \
                 install.packages("plotly"); \
                 install.packages("pheatmap"); \
                 install.packages("gtools"); \
                 install.packages("openxlsx"); \
+                install.packages("vcfR"); \
+                install.packages("tidytext"); \
+                install.packages("dplyr"); \
+                install.packages("heatmaply"); \
+                install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
                 '
+
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
 # Add the virus app
+COPY env/Renviron /home/shiny/.Renviron
 COPY app.R /srv/shiny-server/
