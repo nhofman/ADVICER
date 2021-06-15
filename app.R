@@ -122,7 +122,7 @@ plotExpression <- function(expr.df, padj.df, gene){
   gridExtra::grid.arrange(p1, p2, ncol = 1, heights = c(10, 10))
 }
 
-#readRenviron(".Renviron")
+readRenviron(".Renviron")
 if(Sys.getenv("DATADIR") != ""){
   shinyOptions(filedir = Sys.getenv("DATADIR"))
 }
@@ -510,7 +510,7 @@ server = function(input, output, session) {
   
   output$downPlot <- downloadHandler(
     filename = function(){
-      return(paste0("/home/nina/Documents/Virus_project/virus-shiny-app/",input$plotTypeSingle,"_",input$fileToPlot,".pdf"))
+      return(paste0(input$plotTypeSingle,"_",input$fileToPlot,".pdf"))
     },
     content = function(f){
       print(f)
