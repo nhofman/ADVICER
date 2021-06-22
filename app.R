@@ -390,7 +390,8 @@ server = function(input, output, session) {
   
   output$debug <- renderPrint({
     orca_sys <- Sys.which("orca") 
-    orca_help <- base::system("orca -h") #processx::run("orca", "-h")
+    #orca_help <- base::system("orca -h", intern = T) 
+    orca_help <- processx::run("orca", "-h")
     cat(paste("Orca\n"))
     cat(paste("Sys.which:", orca_sys))
     cat(paste("\nOrca help:", orca_help$stdout))
