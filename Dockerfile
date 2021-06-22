@@ -4,6 +4,11 @@ LABEL maintainer=TODO
 LABEL description=TODO
 LABEL version=TODO
 
+RUN apt-get update
+RUN apt-get -y upgrade
+RUN apt-get -y install npm
+RUN sudo npm install -g electron orca --unsafe-perm=true --allow-root
+
 RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
