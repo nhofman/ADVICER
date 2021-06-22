@@ -6,8 +6,9 @@ LABEL version=TODO
 
 RUN apt-get update
 RUN apt-get -y upgrade
-RUN apt-get -y install npm
-RUN sudo npm install -g electron orca --unsafe-perm=true --allow-root
+RUN wget https://github.com/plotly/orca/releases/download/v1.3.1/orca-1.3.1.AppImage -O /usr/orca
+RUN chmod +x /usr/orca
+RUN apt-get -y install xvfb libgtk2.0-0 libgconf-2-4
 
 RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("DT"); \
