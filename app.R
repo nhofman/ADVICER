@@ -167,7 +167,8 @@ ui <- fluidPage(
                #h2("Uploaded files"),
              ),
              mainPanel(
-               downloadButton("filesDown", "Download selected files")
+               downloadButton("filesDown", "Download selected files"),
+               textOutput("debug", container = pre)
              )
     ),
     tabPanel("Volcano Plot / MAPlot",
@@ -386,6 +387,14 @@ server = function(input, output, session) {
     },
     contentType = "csv"
   )
+  
+  output$debug <- renderPrint({
+    orca_sys <- Sys.which("orca") 
+    orca_help <- processx::run("orca", "-h")
+    cat(paste("Orca\n"))
+    cat(paste("Sys.which:", orca_sys))
+    cat(paste("\nOrca help:", orca_help$stdout))
+  })
   
   ## Volcano Plot / MAPlot
   output$fileSelect <- renderUI({
