@@ -39,3 +39,5 @@ RUN rm -rf /srv/shiny-server/*
 # Add the virus app
 COPY env/Renviron /home/shiny/.Renviron
 COPY app.R /srv/shiny-server/
+
+RUN chmod 777 /home/shiny/.Renviron
