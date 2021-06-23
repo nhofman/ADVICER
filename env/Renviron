@@ -1,1 +1,2 @@
 DATADIR="/data"
+PATH=${PATH}
