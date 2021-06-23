@@ -37,9 +37,11 @@ RUN Rscript -e 'install.packages("shiny"); \
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
 # Add the virus app
-COPY env/Renviron /home/shiny/
-COPY env/Renviron /srv/shiny-server/
+COPY env/.Renviron /home/shiny/
+COPY env/.Renviron /srv/shiny-server/
 COPY app.R /srv/shiny-server/
 
+RUN ls -alh /home/shiny
+
 RUN chmod 777 /home/shiny/.Renviron
-RUN chmod 777 /srv/shiny-server/
+RUN chmod 777 /srv/shiny-server/.Renviron
