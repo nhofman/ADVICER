@@ -45,7 +45,4 @@ RUN ls -alh /home/shiny
 
 RUN chmod 777 /home/shiny/.Renviron
 RUN chmod 777 /srv/shiny-server/.Renviron
-RUN chmod 777 /root/miniconda3/bin/orca
-
-
-RUN which orca
+RUN chmod 777 -R /root/miniconda3/bin
