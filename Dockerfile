@@ -46,3 +46,5 @@ RUN ls -alh /home/shiny
 RUN chmod 777 /home/shiny/.Renviron
 RUN chmod 777 /srv/shiny-server/.Renviron
 RUN chmod 777 -R /root/miniconda3/bin
+
+RUN ls -alh /srv/shiny-server
