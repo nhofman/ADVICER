@@ -126,7 +126,7 @@ readRenviron(".Renviron")
 if(Sys.getenv("DATADIR") != ""){
   shinyOptions(filedir = Sys.getenv("DATADIR"))
 }
-Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/anaconda3/bin", sep = .Platform$path.sep))
+Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Platform$path.sep))
 
 datasetInput <- NULL
 # Define UI for application that draws a histogram
