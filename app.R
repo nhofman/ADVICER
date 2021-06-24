@@ -320,8 +320,8 @@ ui <- fluidPage(
 
 # Define directory containing data
 #filedir <- "/data"
-filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
-#filedir <- getShinyOption("filedir")
+#filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
+filedir <- getShinyOption("filedir")
 #filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
 #filedir.vcf <- getShinyOption("filedirvcf")
