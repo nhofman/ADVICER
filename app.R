@@ -126,6 +126,7 @@ readRenviron(".Renviron")
 if(Sys.getenv("DATADIR") != ""){
   shinyOptions(filedir = Sys.getenv("DATADIR"))
 }
+Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/anaconda3/bin", sep = .Platform$path.sep))
 
 datasetInput <- NULL
 # Define UI for application that draws a histogram
@@ -185,7 +186,7 @@ ui <- fluidPage(
                #downloadButton("downSingle", "Download")
              ),
              mainPanel(
-               #downloadButton("downPlot", "Download plot"),
+               downloadButton("downPlot", "Download plot"),
                actionButton("export", "Export plot"),
                conditionalPanel(
                  condition = 'input.plotTypeSingle == "Volcano"',
@@ -319,8 +320,8 @@ ui <- fluidPage(
 
 # Define directory containing data
 #filedir <- "/data"
-#filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
-filedir <- getShinyOption("filedir")
+filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
+#filedir <- getShinyOption("filedir")
 #filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
 #filedir.vcf <- getShinyOption("filedirvcf")
@@ -524,11 +525,12 @@ server = function(input, output, session) {
       return(paste0(input$plotTypeSingle,"_",input$fileToPlot,".pdf"))
     },
     content = function(f){
-      print(f)
+      print(basename(f))
+      print(dirname(f))
       if(input$plotTypeSingle=="MAPlot"){
-        orca(plotMA(), f,"pdf")
+        orca(plotMA(), basename(f),"pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", dirname(f)))
       }else{
-        orca(plotVolcano(), file = f, format = "pdf")
+        orca(plotVolcano(), file = basename(f), format = "pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", dirname(f)))
       } 
     }, contentType = "application/pdf"
   )
@@ -536,9 +538,9 @@ server = function(input, output, session) {
   observeEvent(input$export, {
     f <- paste0(input$plotTypeSingle,"_",input$fileToPlot,".pdf")
     if(input$plotTypeSingle=="MAPlot"){
-      orca(plotMA(), f,"pdf", more_args = c("--disable-gpu", "--enable-webgl"))
+      orca(plotMA(), f,"pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", "~/Downloads/"))
     }else{
-      orca(plotVolcano(), file = f, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl"))
+      orca(plotVolcano(), file = f, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", "~/Downloads/"))
     } 
   })
   
