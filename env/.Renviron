@@ -1,2 +1,2 @@
 DATADIR="/data"
-PATH="${PATH}"
+PATH="/root/miniconda3/bin/:${PATH}"
