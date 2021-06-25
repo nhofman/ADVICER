@@ -169,7 +169,7 @@ ui <- fluidPage(
              ),
              mainPanel(
                downloadButton("filesDown", "Download selected files"),
-               textOutput("debug", container = pre)
+               #textOutput("debug", container = pre)
              )
     ),
     tabPanel("Volcano Plot / MAPlot",
