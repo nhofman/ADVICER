@@ -9,6 +9,7 @@
 #
 
 library(shiny)
+library(shinyBS)
 library(DT)
 library(VennDiagram)
 library(UpSetR)
@@ -60,7 +61,6 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     color <- c(color,color_up)
   }
   if((nrow(xx)>1 | ncol(xx)>1)){
-    print(paste("File: ", file))
     if(setWidth){
       #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
       if(!is.na(file)){
@@ -75,7 +75,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
         p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
       }
     }
-    p <- p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
+    #p <- p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
     #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
     #         breaks = breakSeq, color = color, annotation_colors = annotation_colors,
@@ -141,7 +141,16 @@ ui <- fluidPage(
               left: calc(50% - 400px);;
               font-size: 28px;
             }
-           "
+            .tooltip > .tooltip-inner {
+                width: 400px;
+                color: white;
+                background-color: grey;
+            }
+            .tooltip.right > .tooltip-arrow {
+              border-right: 5px solid grey;
+            }
+
+            "
       ),
       "#uploadText{color: black;
                                  font-size: 20px;
@@ -176,12 +185,16 @@ ui <- fluidPage(
              sidebarPanel(
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed Plot")), choices = c("Volcano", "MAPlot"), selected = "Volcano"),
+               bsTooltip("fileSelect", "Choose file for plot", placement = "right", trigger = "hover",
+                         options = NULL),
                sliderInput("LFCsingle",
                            h5(strong("LFC cutoff:")),
                            min = 0,
                            max = 10,
                            value = 1, 
                            step = 0.5),
+               bsTooltip("LFCsingle", "Slide through log2FoldChanges", placement = "right", trigger = "hover",
+                         options = NULL),
                br(),
                #downloadButton("downSingle", "Download")
              ),
@@ -205,9 +218,13 @@ ui <- fluidPage(
     tabPanel("Compare time points",
              sidebarPanel(
                radioButtons("plotType", label = h5(strong("Displayed Plot")), choices = c("Venn", "UpSet"), selected = "Venn"),
+               bsTooltip("plotType", "Choose whether to show comparison as Venn diagram or UpSet plot", placement = "right", trigger = "hover",
+                         options = NULL),
                selectInput("select_v", label = h5(strong("Select virus")), 
                            choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL),
+               bsTooltip("select_v", "Choose virus to compare time points for", placement = "right", trigger = "hover",
+                         options = NULL),
                htmlOutput("selectTime"),
                sliderInput("LFC",
                            h5(strong("LFC cutoff:")),
@@ -215,14 +232,19 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
+               bsTooltip("LFC", "Slide through log2FoldChange cutoffs", placement = "right", trigger = "hover",
+                         options = NULL),
                actionButton("addHeat", "Show heatmap"),
-               downloadButton("downHeatTime", "Download heatmap"),
+               #downloadButton("downHeatTime", "Download heatmap"),
                br(),
                br(),
                h5(strong("Download table")),
-               downloadButton("down_vCSV", "Download as csv"),
+               downloadButton("down_vXLSX", "Download as xlsx", class = "butt1"),
+               tags$head(tags$style(".butt1{
+                                    border: 2px solid black;
+                                    font-size: 16px;}")),
                br(),
-               downloadButton("down_vXLSX", "Download as xlsx")
+               downloadButton("down_vCSV", "Download as csv")
              ),
              mainPanel(
                conditionalPanel(
@@ -252,7 +274,11 @@ ui <- fluidPage(
                checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL),
+               bsTooltip("selectVirus", "Select virus(es) to include in plot", placement = "right", trigger = "hover",
+                         options = NULL),
                textInput("gene", label = h3("Gene input"), value = NULL),
+               bsTooltip("gene", "Enter gene symbol to show gene expression for, e.g. TNF or cxcl2", placement = "right", trigger = "hover",
+                         options = NULL),
                downloadButton("downGeneX","Download plot"),
              ), 
              mainPanel(
@@ -265,6 +291,8 @@ ui <- fluidPage(
                checkboxGroupInput("select", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
+               bsTooltip("select", "Select the viruses to compare", placement = "right", trigger = "hover",
+                         options = NULL),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
                #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
@@ -278,18 +306,25 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
+               bsTooltip("LFCall", "Slide through log2FoldChange cutoffs, default: 1", placement = "right", trigger = "hover",
+                         options = NULL),
                sliderInput("limit",
                            h5(strong("Number of intersections:")),
                            min = 0,
                            max = 100,
                            value = 20, 
                            step = 5),
+               bsTooltip("limit", "Change number of intersections shown in the UpSet plot, default: 20", placement = "right", trigger = "hover",
+                         options = NULL),
                #br(),
                br(),
                h5(strong("Download table")),
-               downloadButton("downallCSV", "Download as csv"),
+               downloadButton("downallXLSX", "Download as xlsx", class = "butt"),
+               tags$head(tags$style(".butt{
+                                    border: 2px solid black;
+                                    font-size: 16px;}")),
                br(),
-               downloadButton("downallXLSX", "Download as xlsx")
+               downloadButton("downallCSV", "Download as csv")
              ),
              mainPanel(
                upsetjsOutput("upsetAll"), #, click = "upsetClick"),
@@ -320,8 +355,8 @@ ui <- fluidPage(
 
 # Define directory containing data
 #filedir <- "/data"
-#filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
-filedir <- getShinyOption("filedir")
+filedir <- "/home/nina/Documents/Virus_project/analyses/host/deseq2_new/deseq2_comparisons_shrunken/data/"
+#filedir <- getShinyOption("filedir")
 #filedir <- "/vol/sfb1021/SFB1021_Virus/dge_analyses_new/analyses/host/deseq2/deseq2_comparisons_shrunken/" #"/home/nina/Documents/Virus_project/analyses/host/deseq2_stranded/csv/"
 files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
 #filedir.vcf <- getShinyOption("filedirvcf")
@@ -344,6 +379,7 @@ server = function(input, output, session) {
     })
     #Sys.sleep(5)
     names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
+    datasetInput <- datasetInput[mixedorder(names(datasetInput))]
     
     vcf.list <- lapply(vcf.files, read.vcfR)
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
@@ -422,22 +458,22 @@ server = function(input, output, session) {
   })
   
   # save clicked elements to vector
-  observeEvent(event_data("plotly_click", source = "V"), {
+  observeEvent(event_data("plotly_selected", source = "V"), {
     req(datasetInput)
     req(input$fileToPlot)
-    data$d <- event_data("plotly_click", source = "V")
+    data$d <- event_data("plotly_selected", source = "V")
     a <- data$dV
-    a <- c(a, data$d$customdata)
+    #a <- c(a, data$d$customdata)
     data$dV <- a
   })
   
-  observeEvent(event_data("plotly_click", source = "M"), {
+  observeEvent(event_data("plotly_selected", source = "M"), {
     req(datasetInput)
     req(input$fileToPlot)
-    data$dM <- event_data("plotly_click", source = "M")
-    a <- data$dfM
-    a <- c(a, data$dM$customdata)
-    data$dfM <- a
+    data$dM <- event_data("plotly_selected", source = "M")
+    #a <- data$dfM
+    #a <- c(a, data$dM$customdata)
+    #data$dfM <- a
   })
   
   # display table of clicked elements and associated LFC and padj in Volcano plot
@@ -448,7 +484,7 @@ server = function(input, output, session) {
       return(NULL)
     }else{
       df <- datasetInput[[input$fileToPlot]]
-      df <- df[df$SYMBOL %in% d.V,c("SYMBOL","log2FoldChange","padj")]
+      df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
       df$NCBI <- createLink(df$SYMBOL)
       return(df)
     }
@@ -475,7 +511,7 @@ server = function(input, output, session) {
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                  text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
                  source = "V")
-    p <- p %>% layout(legend = list(orientation = "h", y = -0.2))
+    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
     return(p)
   })
   
@@ -487,7 +523,7 @@ server = function(input, output, session) {
       return(NULL)
     }else{
       df <- datasetInput[[input$fileToPlot]]
-      df <- df[df$SYMBOL %in% d.MA,c("SYMBOL","log2FoldChange","padj")]
+      df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
       df$NCBI <- createLink(df$SYMBOL)
       return(df)
     }
@@ -515,7 +551,7 @@ server = function(input, output, session) {
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
                    source = "M")
-      p <- p %>% layout(legend = list(orientation = "h", y = -0.2))
+      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
       return(p)
     }
   })
@@ -595,14 +631,19 @@ server = function(input, output, session) {
     checkboxGroupInput("time", label = "Choose times to plot (for Venn: max. 5)",
                        choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
                                                    function(x){
-                                                     s <- sub("^[^_]*_","",x)
-                                                     s <- ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
-                                                     #  s <- sub("_Vs_", " : ", s)
+                                                     #s <- sub("^[^_]*_","",x)
+                                                     #s <- ifelse(grepl("Mock",x), x, sub("Vs_.*_","Vs_Virus_",x)) #ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
+                                                     s <- sub("_Vs_", " : ", x)
                                                      #s <- sub("48h$", "48h (HCV only)", s)
                                                      return(s)
                                                    }, USE.NAMES = F)),
                        choiceValues = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
   })
+  
+  addTooltip(session, "selectTime", "Select time points to compare gene lists for. 
+                         Each gene list contains all genes differentially expressed with |LFC| > LFC cutoff and padj < 0.05", 
+            placement = "right", trigger = "hover",
+            options = NULL)
   
   # set heatmap to NULL at selecion of new virus
   observeEvent(input$select_v, {
@@ -824,6 +865,12 @@ server = function(input, output, session) {
                        choiceValues = unique(sapply(unique(sub(".*Vs","Vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
   })
   
+  addTooltip(session, "selectCond", "Select time points to include in virus comparison. 
+                         For each virus all genes differentially expressed in at least one condition are pooled. 
+                         A gene is considered diff. expressed if LFC > <h5>LFC cutoff<h5> and padj < 0.05 and 
+                         normalized gene count of at least one sample >= 10", placement = "right", trigger = "hover",
+            options = NULL)
+  
   all.df <- reactive({
     #data$all.df
     gene_id <- unlist(input$upsetAll_click$elems)
@@ -844,7 +891,7 @@ server = function(input, output, session) {
   # download genes of selected plot area as csv or xlsx
   output$downallCSV <- downloadHandler(
     filename = function(){
-      return(paste0(paste(input$select, collapse = "_"), ".csv"))},
+      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".csv"))},
     content = function(f){
       #write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
       write.csv(all.df(), f, row.names = F)
@@ -853,14 +900,18 @@ server = function(input, output, session) {
   
   output$downallXLSX <- downloadHandler(
     filename = function(){
-      return(paste0(paste(input$select, collapse = "_"), ".xlsx"))},
+      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".xlsx"))},
     content = function(f){
       write.xlsx(all.df(), f)
     })
   
   # display table of genes in selected area
   output$clickedElementsAll <- renderDataTable({
-    data.frame("Symbol"=unlist(input$upsetAll_click$elems), "Link" = createLink(unlist(input$upsetAll_click$elems)))
+    df <- data.frame("Symbol"=unlist(input$upsetAll_click$elems), "Link" = createLink(unlist(input$upsetAll_click$elems)))
+    if(length(unlist(input$upsetAll_click$name)) > 0){
+      colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
+    }
+    return(df)
   }, escape = F)
   
   # plot UpSet plot with selected viruses and conditions
