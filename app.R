@@ -9,7 +9,8 @@
 #
 
 library(shiny)
-library(shinyBS)
+#library(shinyBS)
+#library(shinyWidgets)
 library(DT)
 library(VennDiagram)
 library(UpSetR)
@@ -75,7 +76,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
         p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
       }
     }
-    #p <- p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
+    p <- p %>% config(toImageButtonOptions=list(format="png", width=None, height=None))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
     #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
     #         breaks = breakSeq, color = color, annotation_colors = annotation_colors,
@@ -127,6 +128,7 @@ if(Sys.getenv("DATADIR") != ""){
   shinyOptions(filedir = Sys.getenv("DATADIR"))
 }
 Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Platform$path.sep))
+#addResourcePath("imgResources", "Documents/Virus_project/virus-shiny-app/")
 
 datasetInput <- NULL
 # Define UI for application that draws a histogram
@@ -149,9 +151,15 @@ ui <- fluidPage(
             .tooltip.right > .tooltip-arrow {
               border-right: 5px solid grey;
             }
-
+            #help{
+                  border-radius: 15px;
+                  background-color: rgb(245, 245, 245, 0);
+                  border-color: rgb(245, 245, 245, 0);
+                  
+                  }
             "
       ),
+      "#shiny-modal img { max-width: 100%; }",
       "#uploadText{color: black;
                                  font-size: 20px;
                                  font-style: bold;
@@ -183,24 +191,23 @@ ui <- fluidPage(
     ),
     tabPanel("Volcano Plot / MAPlot",
              sidebarPanel(
+               #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
+               #div(style = "text-align:right", h5(strong("Help"))),
+               div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed Plot")), choices = c("Volcano", "MAPlot"), selected = "Volcano"),
-               bsTooltip("fileSelect", "Choose file for plot", placement = "right", trigger = "hover",
-                         options = NULL),
                sliderInput("LFCsingle",
                            h5(strong("LFC cutoff:")),
                            min = 0,
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               bsTooltip("LFCsingle", "Slide through log2FoldChanges", placement = "right", trigger = "hover",
-                         options = NULL),
                br(),
                #downloadButton("downSingle", "Download")
              ),
              mainPanel(
-               downloadButton("downPlot", "Download plot"),
-               actionButton("export", "Export plot"),
+               #downloadButton("downPlot", "Download plot"),
+               #actionButton("export", "Export plot"),
                conditionalPanel(
                  condition = 'input.plotTypeSingle == "Volcano"',
                  #d.V <- vector(),
@@ -217,14 +224,11 @@ ui <- fluidPage(
              )),
     tabPanel("Compare time points",
              sidebarPanel(
+               div(style = "text-align:right", actionButton("help2", label = div(strong("Help"), icon("question")))),
                radioButtons("plotType", label = h5(strong("Displayed Plot")), choices = c("Venn", "UpSet"), selected = "Venn"),
-               bsTooltip("plotType", "Choose whether to show comparison as Venn diagram or UpSet plot", placement = "right", trigger = "hover",
-                         options = NULL),
                selectInput("select_v", label = h5(strong("Select virus")), 
                            choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL),
-               bsTooltip("select_v", "Choose virus to compare time points for", placement = "right", trigger = "hover",
-                         options = NULL),
                htmlOutput("selectTime"),
                sliderInput("LFC",
                            h5(strong("LFC cutoff:")),
@@ -232,8 +236,6 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               bsTooltip("LFC", "Slide through log2FoldChange cutoffs", placement = "right", trigger = "hover",
-                         options = NULL),
                actionButton("addHeat", "Show heatmap"),
                #downloadButton("downHeatTime", "Download heatmap"),
                br(),
@@ -271,14 +273,11 @@ ui <- fluidPage(
     ),
     tabPanel("Gene expression",
              sidebarPanel(
+               div(style = "text-align:right", actionButton("help3", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL),
-               bsTooltip("selectVirus", "Select virus(es) to include in plot", placement = "right", trigger = "hover",
-                         options = NULL),
-               textInput("gene", label = h3("Gene input"), value = NULL),
-               bsTooltip("gene", "Enter gene symbol to show gene expression for, e.g. TNF or cxcl2", placement = "right", trigger = "hover",
-                         options = NULL),
+               textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
                downloadButton("downGeneX","Download plot"),
              ), 
              mainPanel(
@@ -288,11 +287,10 @@ ui <- fluidPage(
              )),
     tabPanel("Virus Comparison",
              sidebarPanel(
+               div(style = "text-align:right", actionButton("help4", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("select", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
-               bsTooltip("select", "Select the viruses to compare", placement = "right", trigger = "hover",
-                         options = NULL),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
                #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
@@ -306,16 +304,12 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               bsTooltip("LFCall", "Slide through log2FoldChange cutoffs, default: 1", placement = "right", trigger = "hover",
-                         options = NULL),
                sliderInput("limit",
                            h5(strong("Number of intersections:")),
                            min = 0,
                            max = 100,
                            value = 20, 
                            step = 5),
-               bsTooltip("limit", "Change number of intersections shown in the UpSet plot, default: 20", placement = "right", trigger = "hover",
-                         options = NULL),
                #br(),
                br(),
                h5(strong("Download table")),
@@ -339,11 +333,12 @@ ui <- fluidPage(
                
              )),
     tabPanel("SNP analysis",
-             sidebarPanel({
+             sidebarPanel(
+               div(style = "text-align:right", actionButton("help5", label = div(strong("Help"), icon("question")))),
                selectInput("virusSNP", label = h5(strong("Select virus")), 
                            choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL)
-             }),
+             ),
              mainPanel(
                #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
                #DT::dataTableOutput("SNPdata")
@@ -436,6 +431,24 @@ server = function(input, output, session) {
   })
   
   ## Volcano Plot / MAPlot
+  observeEvent(input$help1,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Volcano plot/MA plot")),
+      size = "l",
+      "This tab shows Volcano and MA plots for every uploaded file and allows the user to explore the data. Each file contains the results of the differential gene expression analysis with DEseq2.
+      The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      img(src="Volcano_sidebar.png"),
+      tags$div("The Volcano plot shows the log2FoldChange (LFC) and the negative log10 of the adjusted p-value for the chosen comparison. Significantly differentially expressed genes are colored blue (down-regulated) or red (up-regulated). A gene is considered diff. expressed if: LFC > ", tags$i("LFC cutoff") ,"and padj < 0.05 and normalized gene count of at least one sample >= 10."),
+      img(src="Volcano_plot.png"),
+      "The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot:",
+      img(src="modebar.png"),
+      "The user can further explore the plot by mouseover a dot or by selecting multiple points to show further information like, gene symbol, LFC and padj.",
+      img(src="Volcano_plot_select.png"),
+      "The selected genes are shown in a table along with the LFCs  and adjusted p-values. Additionally a link to the NCBI database is provided for each gene. The link opens in a new tab outside the app. The table can be searched with the Search-field and all columns can be sorted in ascending and descending order.",
+      img(src="Volcano_table.png")
+    ))
+  })
+  
   output$fileSelect <- renderUI({
     selectInput("fileToPlot", label = "Choose file", choices = names(datasetInput))
   })
@@ -640,10 +653,30 @@ server = function(input, output, session) {
                        choiceValues = sub(".*Vs","Vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
   })
   
-  addTooltip(session, "selectTime", "Select time points to compare gene lists for. 
-                         Each gene list contains all genes differentially expressed with |LFC| > LFC cutoff and padj < 0.05", 
-            placement = "right", trigger = "hover",
-            options = NULL)
+  observeEvent(input$help2,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Compare time points")),
+      size = "l",
+      "The tab is meant to compare lists of genes that are diff. expressed after different times of infection.",
+      tags$div("Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
+      "The intersections can either be shown as Venn diagram or UpSet plot.",
+      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      img(src="time_sidebar.png"),
+      "The Venn diagram visualizes the intersections between the desired gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed. Input modifications through the options in the sidebar automatically update the plot.",
+      img(src="time_venn.png"),
+      "By clicking in an intersection the underlying genes are displayed in a sortable table. The table shows the LFC and padj for every gene. It can be downloaded as Excel spreadsheet (xlsx) or comma-separated values file (csv)",
+      img(src="time_venn_select.png"),
+      "The UpSet plot visualizes the intersections in a matrix like layout. This approach allows a larger number of sets to be compared. An intersection is represented by a column, that shows the number of intersecting genes, and colored dots, which indicate the sets that are involved in the intersection. For example in the plot below 4467 genes are differentially expressed after 6h, 12h and 24h, whereas 1601 genes are only diff. expressed at 24h p.i..",
+      img(src="time_upset.png"),
+      "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that also shows the LFC and padj for every gene. The table can be downloaded in xlsx or csv format.",
+      img(src="time_upset_select.png"),
+      "The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:",
+      img(src="time_heatmap.png"),
+      "The user is able to zoom into the heatmap by dragging a box over the desired area. To get information about the underlying data mouse-over a specific cell.",
+      img(src="time_heatmap_zoom.png"),
+      img(src="time_heatmap_zoom2.png")
+    ))
+  })
   
   # set heatmap to NULL at selecion of new virus
   observeEvent(input$select_v, {
@@ -817,6 +850,19 @@ server = function(input, output, session) {
   
   ## Gene expression plot
   # download gene expression plot
+  observeEvent(input$help3,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Gene expression")),
+      size = "l",
+      "The tab is meant to explore the expression profile of genes over time.",
+      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      img(src="expression_sidebar.png"),
+      "The plot shows the expression (LFC) of the selected gene for the chosen viruses over time. The stars represent the significance of the LFC.",
+      img(src="expression_plot_upper.png"),
+      img(src="expression_plot_lower.png"),
+    ))
+  })
+  
   output$downGeneX <- downloadHandler(
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
@@ -865,11 +911,21 @@ server = function(input, output, session) {
                        choiceValues = unique(sapply(unique(sub(".*Vs","Vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
   })
   
-  addTooltip(session, "selectCond", "Select time points to include in virus comparison. 
-                         For each virus all genes differentially expressed in at least one condition are pooled. 
-                         A gene is considered diff. expressed if LFC > <h5>LFC cutoff<h5> and padj < 0.05 and 
-                         normalized gene count of at least one sample >= 10", placement = "right", trigger = "hover",
-            options = NULL)
+  observeEvent(input$help4,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Virus Comparison")),
+      size = "l",
+      "The tab is meant to compare the genes that are diff. expressed after the infection with different viruses.",
+      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      img(src="viruses_sidebar.png"),
+      tags$div("The intersections are shown as UpSet plot. ", tags$a(href = 'https://upset.js.org/integrations/r/index.html')),
+      "For each virus all genes differentially expressed in at least one condition are pooled. A gene is considered diff. expressed if LFC > LFC cutoff and padj < 0.05 and normalized gene count of at least one sample >= 10.",
+      img(src="viruses_upset.png"),
+      "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that also shows the LFC and padj for every gene. The table can be downloaded in xlsx or csv format.",
+      img(src="viruses_upset_select.png"),
+      ""
+    ))
+  })
   
   all.df <- reactive({
     #data$all.df
@@ -1002,6 +1058,19 @@ server = function(input, output, session) {
   })
   
   ## SNP analysis
+  observeEvent(input$help5,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("SNP analysis")),
+      size = "l",
+      "The tab is meant to explore the results of a variant analysis.",
+      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      img(src="snp_sidebar.png"),
+      "The plot shows the frequency of SNPs and INDELs of a chosen virus over time. The user can get further information about a SNP/INDEL by mouseover.",
+      img(src="snp_plot.png"),
+      img(src="snp_plot_mouseover_crop.png")
+    ))
+  })
+  
   # add vertical line to plot
   vline <- function(x = 0, color = "black") {
     list(
