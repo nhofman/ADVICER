@@ -65,18 +65,18 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     if(setWidth){
       #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
       if(!is.na(file)){
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
+        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
       }else{
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
+        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
       }
     }else{
       if(!is.na(file)){
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
+        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
       }else{
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
+        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
       }
     }
-    p <- p %>% config(toImageButtonOptions=list(format="png", width=None, height=None))
+    #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
     #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
     #         breaks = breakSeq, color = color, annotation_colors = annotation_colors,
@@ -380,6 +380,7 @@ server = function(input, output, session) {
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
   })
   
+  # round numeric values
   datasetInput <- lapply(datasetInput, function(x){
     x[,c(5:ncol(x))] <- signif(x[,c(5:ncol(x))], 4)
     return(x)
@@ -657,14 +658,14 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Compare time points")),
       size = "l",
-      "The tab is meant to compare lists of genes that are diff. expressed after different times of infection.",
+      "This tab is meant to compare the differential gene expression between different times of infection.",
       tags$div("Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
-      "The intersections can either be shown as Venn diagram or UpSet plot.",
+      tags$div("The intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(Info)", href="https://upset.js.org/integrations/r/index.html"), "."),
       "The sidebar shows the options with which the user is able to control and manipulate the plot:",
       img(src="time_sidebar.png"),
       "The Venn diagram visualizes the intersections between the desired gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed. Input modifications through the options in the sidebar automatically update the plot.",
       img(src="time_venn.png"),
-      "By clicking in an intersection the underlying genes are displayed in a sortable table. The table shows the LFC and padj for every gene. It can be downloaded as Excel spreadsheet (xlsx) or comma-separated values file (csv)",
+      "By clicking in an intersection the underlying genes are displayed in a sortable table. The table shows the LFC and padj for every gene. It can be downloaded as Excel spreadsheet (xlsx) or comma-separated values file (csv).",
       img(src="time_venn_select.png"),
       "The UpSet plot visualizes the intersections in a matrix like layout. This approach allows a larger number of sets to be compared. An intersection is represented by a column, that shows the number of intersecting genes, and colored dots, which indicate the sets that are involved in the intersection. For example in the plot below 4467 genes are differentially expressed after 6h, 12h and 24h, whereas 1601 genes are only diff. expressed at 24h p.i..",
       img(src="time_upset.png"),
@@ -859,6 +860,7 @@ server = function(input, output, session) {
       img(src="expression_sidebar.png"),
       "The plot shows the expression (LFC) of the selected gene for the chosen viruses over time. The stars represent the significance of the LFC.",
       img(src="expression_plot_upper.png"),
+      "The plot shows the expression of the selected gene for the comparisons that include the inactivated control.",
       img(src="expression_plot_lower.png"),
     ))
   })
@@ -915,15 +917,15 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Virus Comparison")),
       size = "l",
-      "The tab is meant to compare the genes that are diff. expressed after the infection with different viruses.",
+      "This tab is meant to compare the genes that are diff. expressed after the infection with different viruses.",
       "The sidebar shows the options with which the user is able to control and manipulate the plot:",
       img(src="viruses_sidebar.png"),
-      tags$div("The intersections are shown as UpSet plot. ", tags$a(href = 'https://upset.js.org/integrations/r/index.html')),
-      "For each virus all genes differentially expressed in at least one condition are pooled. A gene is considered diff. expressed if LFC > LFC cutoff and padj < 0.05 and normalized gene count of at least one sample >= 10.",
+      tags$div("The intersections are shown as UpSet plot ", tags$a("(Info)", href = "https://upset.js.org/integrations/r/index.html"), "."),
+      tags$div("For each virus all genes differentially expressed in at least one condition are pooled. A gene is considered diff. expressed if LFC > ",tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
       img(src="viruses_upset.png"),
       "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that also shows the LFC and padj for every gene. The table can be downloaded in xlsx or csv format.",
       img(src="viruses_upset_select.png"),
-      ""
+      "A heatmap of the genes in the selected intersection is displayed and downloadable in the next tab 'Heatmap'."
     ))
   })
   
@@ -1062,12 +1064,11 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("SNP analysis")),
       size = "l",
-      "The tab is meant to explore the results of a variant analysis.",
-      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      "This tab is meant to explore the results of a variant analysis.",
+      tags$div("The sidebar shows the options with which the user is able to control and manipulate the plot:"),
       img(src="snp_sidebar.png"),
-      "The plot shows the frequency of SNPs and INDELs of a chosen virus over time. The user can get further information about a SNP/INDEL by mouseover.",
-      img(src="snp_plot.png"),
-      img(src="snp_plot_mouseover_crop.png")
+      tags$div("The plot shows the frequency of SNPs and INDELs of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s), as well as the frequency of a SNP and the read depth at the SNP position."),
+      img(src="snp_plot_mouseover.png")
     ))
   })
   
