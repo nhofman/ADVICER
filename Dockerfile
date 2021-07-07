@@ -40,7 +40,7 @@ RUN rm -rf /srv/shiny-server/*
 COPY env/.Renviron /home/shiny/
 COPY env/.Renviron /srv/shiny-server/
 COPY app.R /srv/shiny-server/
-COPY www /src/shiny-server/
+COPY www /srv/shiny-server/
 
 RUN chmod 777 /home/shiny/.Renviron
 RUN chmod 777 /srv/shiny-server/.Renviron
