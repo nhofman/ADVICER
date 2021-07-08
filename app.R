@@ -425,12 +425,12 @@ server = function(input, output, session) {
     },
     content = function(f){
       files <- NULL
-      if(input$filesToDown=="all"){
+      if("all" %in% input$filesToDown){
         files <- files.list
       }else{
         for (i in input$filesToDown){
           #write each sheet to a csv file, save the name
-          fileName <- files.list[grep(i,files.list)] #paste(i,".csv",sep = "")
+          fileName <- files.list[grep(sub("vs","Vs",i),files.list)] #paste(i,".csv",sep = "")
           #write.table(datasetInput[i],fileName,sep = ',', row.names = F, col.names = T)
           files <- c(files,fileName)
         }
@@ -682,8 +682,8 @@ server = function(input, output, session) {
       title = tags$div("Help for ", tags$b("Compare time points")),
       size = "l",
       "This tab is meant to compare the differential gene expression between different times of infection.",
-      tags$div("Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
-      tags$div("The intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(Info)", href="https://upset.js.org/integrations/r/index.html"), "."),
+      tags$div("Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample >= 10."),
+      tags$div("The intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(Info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), "."),
       "The sidebar shows the options with which the user is able to control and manipulate the plot:",
       img(src="time_sidebar.png"),
       "The Venn diagram visualizes the intersections between the desired gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed. Input modifications through the options in the sidebar automatically update the plot.",
@@ -879,8 +879,8 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Gene expression")),
       size = "l",
-      "The tab is meant to explore the expression profile of genes over time.",
-      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
+      "This tab is meant to explore the expression profile of genes over time.",
+      "The sidebar shows the options with which the user is able to control the plot:",
       img(src="expression_sidebar.png"),
       "The plot shows the expression (LFC) of the selected gene for the chosen viruses over time. The stars represent the significance of the LFC.",
       img(src="expression_plot_upper.png"),
@@ -946,10 +946,11 @@ server = function(input, output, session) {
       "This tab is meant to compare the genes that are diff. expressed after the infection with different viruses.",
       "The sidebar shows the options with which the user is able to control and manipulate the plot:",
       img(src="viruses_sidebar.png"),
-      tags$div("The intersections are shown as UpSet plot ", tags$a("(Info)", href = "https://upset.js.org/integrations/r/index.html"), "."),
-      tags$div("For each virus all genes differentially expressed in at least one condition are pooled. A gene is considered diff. expressed if LFC > ",tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
+      tags$div("The intersections are shown as UpSet plot ", tags$a("(Info)", href = "https://jku-vds-lab.at/tools/upset/", target="_blank"), "."),
+      tags$div("For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered diff. expressed if: LFC > ",tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
       img(src="viruses_upset.png"),
       "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that provides the gene symbol and a link to the NCBI database. The downloaded table also contains the LFC and padj for every condition that was included in the analysis. The table can be downloaded in xlsx or csv format.",
+      tags$div("The selected column in the example (colored orange) shows, that there are 218 genes that are diff. expressed in at least one of the included time points in all viruses."),
       img(src="viruses_upset_select.png"),
       "A heatmap of the genes in the selected intersection is displayed and downloadable in the next tab 'Heatmap'."
     ))
@@ -1093,7 +1094,7 @@ server = function(input, output, session) {
       title = tags$div("Help for ", tags$b("SNP analysis")),
       size = "l",
       "This tab is meant to explore the results of a variant analysis.",
-      tags$div("The sidebar shows the options with which the user is able to control and manipulate the plot:"),
+      tags$div("The sidebar shows the options with which the user is able to control the plot:"),
       img(src="snp_sidebar.png"),
       tags$div("The plot shows the frequency of SNPs and INDELs of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s), as well as the frequency of a SNP and the read depth at the SNP position."),
       img(src="snp_plot_mouseover.png")
