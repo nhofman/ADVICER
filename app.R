@@ -111,7 +111,7 @@ plotExpression <- function(expr.df, padj.df, gene){
           axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
-    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
+    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
           legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
@@ -120,7 +120,8 @@ plotExpression <- function(expr.df, padj.df, gene){
   #p <- c(p1, p2)
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
   #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
-  gridExtra::grid.arrange(p1, p2, ncol = 1, heights = c(10, 10))
+  p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
+  return(p)
 }
 
 readRenviron(".Renviron")
@@ -190,13 +191,13 @@ ui <- fluidPage(
                #textOutput("debug", container = pre)
              )
     ),
-    tabPanel("Volcano Plot / MAPlot",
+    tabPanel("Volcano Plot / MA-Plot",
              sidebarPanel(
                #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
                #div(style = "text-align:right", h5(strong("Help"))),
                div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
-               radioButtons("plotTypeSingle", label = h5(strong("Displayed Plot")), choices = c("Volcano", "MAPlot"), selected = "Volcano"),
+               radioButtons("plotTypeSingle", label = h5(strong("Displayed plot")), choices = c("Volcano plot", "MA-plot"), selected = "Volcano plot"),
                sliderInput("LFCsingle",
                            h5(strong("LFC cutoff:")),
                            min = 0,
@@ -210,14 +211,14 @@ ui <- fluidPage(
                #downloadButton("downPlot", "Download plot"),
                #actionButton("export", "Export plot"),
                conditionalPanel(
-                 condition = 'input.plotTypeSingle == "Volcano"',
+                 condition = 'input.plotTypeSingle == "Volcano plot"',
                  #d.V <- vector(),
                  plotlyOutput("volcanoPlot", height = "500px"),
                  br(),
                  dataTableOutput("clickVP")
                ),
                conditionalPanel(
-                 condition = 'input.plotTypeSingle == "MAPlot"',
+                 condition = 'input.plotTypeSingle == "MA-plot"',
                  plotlyOutput("MAPlot", height = "500px"),
                  br(),
                  dataTableOutput("clickMA")
@@ -226,7 +227,7 @@ ui <- fluidPage(
     tabPanel("Compare Time Points",
              sidebarPanel(
                div(style = "text-align:right", actionButton("help2", label = div(strong("Help"), icon("question")))),
-               radioButtons("plotType", label = h5(strong("Displayed Plot")), choices = c("Venn", "UpSet"), selected = "Venn"),
+               radioButtons("plotType", label = h5(strong("Displayed plot")), choiceNames = c("Venn diagram", "UpSet plot"), choiceValues = c("Venn", "UpSet"), selected = "Venn"),
                selectInput("select_v", label = h5(strong("Select virus")), 
                            choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL),
@@ -279,7 +280,9 @@ ui <- fluidPage(
                                   choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL),
                textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
-               downloadButton("downGeneX","Download plot"),
+               h5(strong("Download plot")),
+               downloadButton("downGeneXpng","Download as png"),
+               downloadButton("downGeneXsvg","Download as svg")
              ), 
              mainPanel(
                plotOutput("geneX", height = 1000),
@@ -328,6 +331,10 @@ ui <- fluidPage(
              )
     ),
     tabPanel("Heatmap Virus Comparison",
+             sidebarPanel(
+               div(style = "text-align:right", actionButton("help5", label = div(strong("Help"), icon("question")))),
+               h5("Please select an intersection in the tab 'Virus Comparison' to show the corresponding heatmap.")
+             ),
              mainPanel(
                #downloadButton("downHeatAll", "Download heatmap"),
                plotlyOutput("heatmapAll", height = 1500)
@@ -335,7 +342,7 @@ ui <- fluidPage(
              )),
     tabPanel("SNP Analysis",
              sidebarPanel(
-               div(style = "text-align:right", actionButton("help5", label = div(strong("Help"), icon("question")))),
+               div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
                selectInput("virusSNP", label = h5(strong("Select virus")), 
                            choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL)
@@ -358,7 +365,7 @@ vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 server = function(input, output, session) {
   
   # Define reactive values
-  data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, virus.df=NULL)
+  data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=NULL, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, virus.df=NULL, plotX=NULL)
   
   # Read data
   withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
@@ -387,16 +394,16 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Download Data")),
       size = "l",
-      "Here a user can download the results of the differential gene expression analysis with DESeq2 in table format. For each gene the table contains:",
+      "Results of the differential gene expression analysis with DESeq2 in table format. For each gene the table contains:",
       tags$div(
         tags$ul(
           tags$li("UNIPROT: Uniprot identifier"),
           tags$li("GENENAME: gene name"),
-          tags$li("PATH: KEGG pathways, that are associated with a gene"),
+          tags$li("PATH: KEGG pathways associated with a gene"),
           tags$li("baseMean: base mean of normalized read counts"),
-          tags$li("log2FoldChange: log2foldchange for condition treated vs untreated"),
+          tags$li("log2FoldChange: log2FoldChange (LFC) for conditions treated vs untreated"),
           tags$li("lfcSE: standard error"),
-          tags$li("pvalue: p-value for LFC (describes probability to get this log2FoldChange by chance)"),
+          tags$li("pvalue: p-value for LFC (describes the probability to get this LFC by chance)"),
           tags$li("padj: Benjamini-Hochberg adjusted p-value (p-value adjustment for multiple hypothesis testing)"),
           tags$li("log10(padj): logarithmic padj used in Volcano plot"),
           tags$li("normalized_[sample-name]: normalized read counts for every replicate")
@@ -455,18 +462,22 @@ server = function(input, output, session) {
   # Help text
   observeEvent(input$help1,{
     showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("Volcano plot/MA plot")),
+      title = tags$div("Help for ", tags$b("Volcano Plot/MA-Plot")),
       size = "l",
-      "This tab shows Volcano and MA plots for every uploaded file and allows the user to explore the data. Each file contains the results of the differential gene expression analysis with DEseq2.
-      The sidebar shows the options with which the user is able to control and manipulate the plot:",
-      img(src="Volcano_sidebar.png"),
-      tags$div("The Volcano plot shows the log2FoldChange (LFC) and the negative log10 of the adjusted p-value for the chosen comparison. Significantly differentially expressed genes are colored blue (down-regulated) or red (up-regulated). A gene is considered diff. expressed if: LFC > ", tags$i("LFC cutoff") ,"and padj < 0.05 and normalized gene count of at least one sample >= 10."),
+      tags$div("Volcano plots and MA-plots for uploaded files. Each file contains the results of the differential gene expression analysis with DEseq2.
+      The sidebar shows the available options to adapt the plots:"),
+      img(src="volcano_sidebar.jpg"),
+      tags$div("The Volcano plot shows the log2FoldChange (LFC) and the negative log10 of the adjusted p-value (padj) for the chosen comparison. Significantly differentially expressed genes are colored blue (down-regulated) or red (up-regulated). A gene is considered differentially expressed if: LFC > ", tags$i("LFC cutoff") ,"and padj < 0.05 and a normalized gene count of at least one sample ≥ 10."),
+      HTML("<br><br>"),
       img(src="Volcano_plot.png"),
-      "The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot:",
-      img(src="modebar.png"),
-      "The user can further explore the plot by mouseover a dot or by selecting multiple points to show further information like, gene symbol, LFC and padj.",
-      img(src="Volcano_plot_select.png"),
-      "The selected genes are shown in a table along with the LFCs  and adjusted p-values. Additionally a link to the NCBI database is provided for each gene. The link opens in a new tab outside the app. The table can be searched with the Search-field and all columns can be sorted in ascending and descending order.",
+      HTML("<br><br>"),
+      tags$div("The modebar in the upper right corner of the plot shows:"),
+      HTML("<br><br>"),
+      img(src="volcano_modebar.png"),
+      HTML("<br><br>"),
+      tags$div("Further information for one or multiple points, like gene symbol, LFC and padj, can be shown by mouse over."),
+      img(src="volcano_plot_select.jpg"),
+      tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order."),
       img(src="Volcano_table.png")
     ))
   })
@@ -550,7 +561,7 @@ server = function(input, output, session) {
     return(p)
   })
   
-  # display table of clicked elements and associated LFC and padj in MA plot
+  # display table of clicked elements and associated LFC and padj in MA-plot
   output$clickMA <- renderDataTable({
     d <- data$dM
     d.MA <- data$dfM
@@ -564,7 +575,7 @@ server = function(input, output, session) {
     }
   }, escape = F)
   
-  # plot MA plot of selected sample
+  # plot MA-plot of selected sample
   output$MAPlot <- renderPlotly({
     p <- plotMA()
     p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
@@ -577,10 +588,11 @@ server = function(input, output, session) {
       file.data <- datasetInput[[input$fileToPlot]]
       file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                               ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
-      p <- ggplot(file.data, aes(x = log2FoldChange, y = -log(padj), color = col, text = SYMBOL)) +
-        geom_point(aes(size = 0.4)) +
-        xlab("log fold change") + ylab("-log10(P-value)") + scale_color_manual(values = c("yellow", "purple", "black")) + 
-        theme(legend.position = "bottom", legend.direction = "horizontal", axis.title = element_text(size = 16, face = "bold"), axis.text = element_text(size = 16, face = "bold"))
+      file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
+      #p <- ggplot(file.data, aes(x = log2FoldChange, y = -log(padj), color = col, text = SYMBOL)) +
+      #  geom_point(aes(size = 0.4)) +
+      #  xlab("log fold change") + ylab("-log10(P-value)") + scale_color_manual(values = c("yellow", "purple", "black")) + 
+      #  theme(legend.position = "bottom", legend.direction = "horizontal", axis.title = element_text(size = 16, face = "bold"), axis.text = element_text(size = 16, face = "bold"))
       #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
       p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
@@ -664,7 +676,7 @@ server = function(input, output, session) {
   
   # select times to plot
   output$selectTime <- renderUI({
-    checkboxGroupInput("time", label = "Choose times to plot (for Venn: max. 5)",
+    checkboxGroupInput("time", label = "Choose time points (for Venn: max. 5)",
                        choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
                                                    function(x){
                                                      #s <- sub("^[^_]*_","",x)
@@ -676,29 +688,36 @@ server = function(input, output, session) {
                        choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
   })
   
-  # Help text
+  # Help text 
   observeEvent(input$help2,{
     showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("Compare time points")),
+      title = tags$div("Help for ", tags$b("Compare Time Points")),
       size = "l",
-      "This tab is meant to compare the differential gene expression between different times of infection.",
-      tags$div("Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample >= 10."),
-      tags$div("The intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(Info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), "."),
-      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
-      img(src="time_sidebar.png"),
-      "The Venn diagram visualizes the intersections between the desired gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed. Input modifications through the options in the sidebar automatically update the plot.",
-      img(src="time_venn.png"),
-      "By clicking in an intersection the underlying genes are displayed in a sortable table. The table shows the LFC and padj for every gene. It can be downloaded as Excel spreadsheet (xlsx) or comma-separated values file (csv).",
+      tags$div("This tab is meant to compare the differential gene expression between different time points of infection. Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample ≥ 10. Intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), ". The sidebar shows the available options to adapt the plots:"),
+      img(src="time_sidebar.jpg"),
+      "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
+      img(src="time_venn.jpg"),
+      tags$div("Clicking an intersection will display underlying genes in a sortable table. The table shows the log2FoldChange (LFC) and adjusted p-value (padj) for every gene. The table can be downloaded as xlsx or csv file."),
+      HTML("<br><br>"),
       img(src="time_venn_select.png"),
-      "The UpSet plot visualizes the intersections in a matrix like layout. This approach allows a larger number of sets to be compared. An intersection is represented by a column, that shows the number of intersecting genes, and colored dots, which indicate the sets that are involved in the intersection. For example in the plot below 4467 genes are differentially expressed after 6h, 12h and 24h, whereas 1601 genes are only diff. expressed at 24h p.i..",
-      img(src="time_upset.png"),
-      "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that also shows the LFC and padj for every gene. The table can be downloaded in xlsx or csv format.",
-      img(src="time_upset_select.png"),
-      "The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:",
-      img(src="time_heatmap.png"),
-      "The user is able to zoom into the heatmap by dragging a box over the desired area. To get information about the underlying data mouse-over a specific cell.",
-      img(src="time_heatmap_zoom.png"),
-      img(src="time_heatmap_zoom2.png")
+      HTML("<br><br>"),
+      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 4467 genes are differentially expressed (see bar) after 6h, 12h and 24h (see black dots in column below)."),
+      img(src="time_upset.jpg"),
+      tags$div("Genes in an intersection can be listed in a sortable table along with LFC and padj by clicking on the appropriate bar. The table can be downloaded in xlsx or csv file."),
+      HTML("<br><br>"),
+      img(src="time_upset_select.jpg"),
+      HTML("<br><br>"),
+      tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:"),
+      img(src="time_heatmap.jpg"),
+      HTML("<br><br>"),
+      tags$div("The modebar in the right upper corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
+      HTML("<br><br>"),
+      img(src="heatmap_modebar.png"),
+      HTML("<br><br>"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
+      HTML("<br><br>"),
+      img(src="time_heatmap_zoom.jpg"),
+      img(src="time_heatmap_zoom2.jpg")
     ))
   })
   
@@ -877,33 +896,54 @@ server = function(input, output, session) {
   # Help text
   observeEvent(input$help3,{
     showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("Gene expression")),
+      title = tags$div("Help for ", tags$b("Gene Expression")),
       size = "l",
-      "This tab is meant to explore the expression profile of genes over time.",
-      "The sidebar shows the options with which the user is able to control the plot:",
-      img(src="expression_sidebar.png"),
-      "The plot shows the expression (LFC) of the selected gene for the chosen viruses over time. The stars represent the significance of the LFC.",
+      tags$div("This tab is meant to explore the expression profile of genes over time.",
+      "The sidebar shows the available options to adapt the plots:"),
+      img(src="expression_sidebar.jpg"),
+      HTML("<br><br>"),
+      tags$div("The plot shows the expression of the selected gene for the chosen viruses as log2FoldChange (LFC) over time. The stars represent the significance of the LFC."),
+      HTML("<br><br>"),
       img(src="expression_plot_upper.png"),
-      "The plot shows the expression of the selected gene for the comparisons that include the inactivated control.",
+      HTML("<br><br>"),
+      tags$div("The plot shows the expression of the selected gene as LFC. The left hand side shows the 24 h time point of the selected viruses compared to the inactivated virus (Virus BPL), whereas the right hand side shows the inactivated virus compared to the uninfected control (Mock BPL)."),
+      HTML("<br><br>"),
       img(src="expression_plot_lower.png"),
     ))
   })
   
   # download gene expression plot
-  output$downGeneX <- downloadHandler(
+  output$downGeneXpng <- downloadHandler(
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
     content = function(f){
-      ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
+      ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
+    }
+  )
+  
+  output$downGeneXsvg <- downloadHandler(
+    filename = function(){
+      return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
+    content = function(f){
+      ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
     }
   )
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
-    print(plot_geneX())
+    p <- data$plotX
+    if(is.null(p)){
+      return(NULL)
+    }else{
+      plot(p)
+    }
   })
   
   plot_geneX <- reactive({
+    list(input$selectVirus, input$gene)
+  })
+  
+  observeEvent(plot_geneX(), {
     if(is.null(input$selectVirus) | is.null(input$gene)){
       return(NULL)
     }else{
@@ -919,7 +959,7 @@ server = function(input, output, session) {
         return(x.df)}))
       rownames(padj.df) <- padj.df$SYMBOL
       padj.df <- padj.df[,-1]
-      return(plotExpression(expr.df = lfc.df, padj.df = padj.df, gene = toupper(input$gene)))
+      data$plotX <- plotExpression(expr.df = lfc.df, padj.df = padj.df, gene = toupper(input$gene))
     }
   })
   
@@ -927,7 +967,7 @@ server = function(input, output, session) {
   
   # select time points to include in comparison
   output$selectCond <- renderUI({
-    checkboxGroupInput("cond", label = "Choose times to include", 
+    checkboxGroupInput("cond", label = "Choose time points", 
                        choiceNames = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
                                                    function(x){
                                                      s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x))
@@ -943,16 +983,20 @@ server = function(input, output, session) {
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Virus Comparison")),
       size = "l",
-      "This tab is meant to compare the genes that are diff. expressed after the infection with different viruses.",
-      "The sidebar shows the options with which the user is able to control and manipulate the plot:",
-      img(src="viruses_sidebar.png"),
-      tags$div("The intersections are shown as UpSet plot ", tags$a("(Info)", href = "https://jku-vds-lab.at/tools/upset/", target="_blank"), "."),
-      tags$div("For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered diff. expressed if: LFC > ",tags$i("LFC cutoff")," and padj < 0.05 and normalized gene count of at least one sample >= 10."),
-      img(src="viruses_upset.png"),
-      "The user can view the genes in an intersection by clicking on the appropriate column. The gene set is displayed as a sortable table that provides the gene symbol and a link to the NCBI database. The downloaded table also contains the LFC and padj for every condition that was included in the analysis. The table can be downloaded in xlsx or csv format.",
-      tags$div("The selected column in the example (colored orange) shows, that there are 218 genes that are diff. expressed in at least one of the included time points in all viruses."),
-      img(src="viruses_upset_select.png"),
-      "A heatmap of the genes in the selected intersection is displayed and downloadable in the next tab 'Heatmap'."
+      tags$div("This tab is meant to compare the genes that are differentially expressed after the infection with different viruses.",
+      "The sidebar shows the available options to adapt the plots:"),
+      img(src="viruses_sidebar.jpg"),
+      HTML("<br><br>"),
+      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout ", tags$a("(info)", href = "https://jku-vds-lab.at/tools/upset/", target="_blank"), ".",
+      "This approach allows to compare a large number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots.",
+      "For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered differentially expressed if: log2FoldChange (LFC) > ",tags$i("LFC cutoff")," and adjusted p-value (padj) < 0.05 and a normalized gene count of at least one sample ≥ 10."),
+      img(src="viruses_upset.jpg"),
+      tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded in xlsx or csv format.",
+      "The selected bar in the example (colored orange) shows, that there are 218 genes that are diff. expressed in at least one of the included time points (see bar) in MARV, EBOV and NIV (see black dots in column below)."),
+      HTML("<br><br>"),
+      img(src="viruses_upset_select.jpg"),
+      HTML("<br><br>"),
+      tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'.")
     ))
   })
   
@@ -1027,6 +1071,23 @@ server = function(input, output, session) {
     }
   )
   
+  observeEvent(input$help5,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Heatmap Virus Comparison")),
+      size = "l",
+      tags$div("This tab shows the corresponding heatmap after an intersection is selected in the tab 'Virus Comparison'."),
+      img(src="viruses_heatmap.jpg"),
+      tags$div("The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot: "),
+      HTML("<br><br>"),
+      img(src="heatmap_modebar.png"),
+      HTML("<br><br>"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
+      HTML("<br><br>"),
+      img(src="viruses_heatmap_zoom.jpg"),
+      img(src="viruses_heatmap_zoom2.jpg")
+    ))
+  })
+  
   # plot heatmap of genes in selected area
   output$heatmapAll <- renderPlotly({
     plot_heat_all()
@@ -1036,30 +1097,11 @@ server = function(input, output, session) {
     if(is.null(input$select) | is.null(input$cond) | is.null(input$upsetAll_click$elems)){
       return(NULL)
     }else{
-      # cond <- ifelse(grepl("Virus",input$cond), sub("Virus", "(?!Mock).*",input$cond), input$cond)
-      # #   paste(as.vector(outer(virus.levels, cond, paste, sep=".*")), collapse = "|")
-      # 
-      # data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste(as.vector(outer(input$select, cond, paste, sep=".*")), collapse = "|"), names(datasetInput), perl = T)]), function(x){
-      #     y <- datasetInput[[x]]
-      #     y <- y[unlist(input$upsetAll_click$elems), c("SYMBOL","log2FoldChange")]
-      #     colnames(y) <- c("SYMBOL", x)
-      #     return(y)
-      # })
-      # )
-      # #print(data.df$SYMBOL[duplicated(data.df$SYMBOL)])
-      # data.df <- data.df[rowSums(is.na(data.df))!=ncol(data.df),,drop=F]
-      # rownames(data.df) <- data.df$SYMBOL
-      # data.df <- data.df[,-1,drop=F]
-      # data.df <- data.df[,mixedorder(colnames(data.df)),drop=F]
       data <- all.df()
       data.rows <- data$SYMBOL
       data <- data[,-c(1,ncol(data))]
       data <- data[,c(TRUE, FALSE)]
       colnames(data) <- sub(".LFC","",colnames(data))
-      #for(i in 1:ncol(data)){
-      #    data[,i] <- sub("-", NA, data[,i])
-      #}
-      #data[data=="-"] <- NA
       data <- apply(data,2,as.numeric)
       rownames(data) <- data.rows
       hover <- matrix(ncol = ncol(data), nrow = nrow(data))
@@ -1089,15 +1131,20 @@ server = function(input, output, session) {
   ## SNP analysis
   
   # Help text
-  observeEvent(input$help5,{
+  observeEvent(input$help6,{
     showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("SNP analysis")),
+      title = tags$div("Help for ", tags$b("SNP Analysis")),
       size = "l",
-      "This tab is meant to explore the results of a variant analysis.",
-      tags$div("The sidebar shows the options with which the user is able to control the plot:"),
+      tags$div("This tab is meant to explore the results of a variant analysis."),
+      HTML("<br>"),
       img(src="snp_sidebar.png"),
-      tags$div("The plot shows the frequency of SNPs and INDELs of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s), as well as the frequency of a SNP and the read depth at the SNP position."),
-      img(src="snp_plot_mouseover.png")
+      HTML("<br><br>"),
+      tags$div("The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot: "),
+      HTML("<br>"),
+      img(src="snp_modebar.png"),
+      HTML("<br><br>"),
+      tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over a cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s) as well as the frequency of a SNP and the read depth at the SNP position."),
+      img(src="snp_mouseover.jpg")
     ))
   })
   
