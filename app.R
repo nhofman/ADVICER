@@ -697,7 +697,7 @@ server = function(input, output, session) {
       img(src="time_sidebar.png"),
       "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
       img(src="time_venn.png"),
-      tags$div("Clicking an intersection will display underlying genes in a sortable table. The table shows the log2FoldChange (LFC) and adjusted p-value (padj) for every gene. The table can be downloaded as xlsx or csv file."),
+      tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. for every gene. The table can be downloaded as xlsx or csv file."),
       HTML("<br><br>"),
       img(src="time_venn_select.png"),
       HTML("<br><br>"),
