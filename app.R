@@ -466,7 +466,7 @@ server = function(input, output, session) {
       size = "l",
       tags$div("Volcano plots and MA-plots for uploaded files. Each file contains the results of the differential gene expression analysis with DEseq2.
       The sidebar shows the available options to adapt the plots:"),
-      img(src="volcano_sidebar.jpg"),
+      img(src="volcano_sidebar.png"),
       tags$div("The Volcano plot shows the log2FoldChange (LFC) and the negative log10 of the adjusted p-value (padj) for the chosen comparison. Significantly differentially expressed genes are colored blue (down-regulated) or red (up-regulated). A gene is considered differentially expressed if: LFC > ", tags$i("LFC cutoff") ,"and padj < 0.05 and a normalized gene count of at least one sample ≥ 10."),
       HTML("<br><br>"),
       img(src="Volcano_plot.png"),
@@ -476,7 +476,7 @@ server = function(input, output, session) {
       img(src="volcano_modebar.png"),
       HTML("<br><br>"),
       tags$div("Further information for one or multiple points, like gene symbol, LFC and padj, can be shown by mouse over."),
-      img(src="volcano_plot_select.jpg"),
+      img(src="volcano_plot_select.png"),
       tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order."),
       img(src="Volcano_table.png")
     ))
@@ -694,30 +694,30 @@ server = function(input, output, session) {
       title = tags$div("Help for ", tags$b("Compare Time Points")),
       size = "l",
       tags$div("This tab is meant to compare the differential gene expression between different time points of infection. Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample ≥ 10. Intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), ". The sidebar shows the available options to adapt the plots:"),
-      img(src="time_sidebar.jpg"),
+      img(src="time_sidebar.png"),
       "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
-      img(src="time_venn.jpg"),
+      img(src="time_venn.png"),
       tags$div("Clicking an intersection will display underlying genes in a sortable table. The table shows the log2FoldChange (LFC) and adjusted p-value (padj) for every gene. The table can be downloaded as xlsx or csv file."),
       HTML("<br><br>"),
       img(src="time_venn_select.png"),
       HTML("<br><br>"),
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 4467 genes are differentially expressed (see bar) after 6h, 12h and 24h (see black dots in column below)."),
-      img(src="time_upset.jpg"),
-      tags$div("Genes in an intersection can be listed in a sortable table along with LFC and padj by clicking on the appropriate bar. The table can be downloaded in xlsx or csv file."),
+      img(src="time_upset.png"),
+      tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."),
       HTML("<br><br>"),
-      img(src="time_upset_select.jpg"),
+      img(src="time_upset_select.png"),
       HTML("<br><br>"),
       tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:"),
-      img(src="time_heatmap.jpg"),
+      img(src="time_heatmap.png"),
       HTML("<br><br>"),
-      tags$div("The modebar in the right upper corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
+      tags$div("The modebar in the upper right corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
       HTML("<br><br>"),
       img(src="heatmap_modebar.png"),
       HTML("<br><br>"),
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
       HTML("<br><br>"),
-      img(src="time_heatmap_zoom.jpg"),
-      img(src="time_heatmap_zoom2.jpg")
+      img(src="time_heatmap_zoom.png"),
+      img(src="time_heatmap_zoom2.png")
     ))
   })
   
@@ -900,7 +900,7 @@ server = function(input, output, session) {
       size = "l",
       tags$div("This tab is meant to explore the expression profile of genes over time.",
       "The sidebar shows the available options to adapt the plots:"),
-      img(src="expression_sidebar.jpg"),
+      img(src="expression_sidebar.png"),
       HTML("<br><br>"),
       tags$div("The plot shows the expression of the selected gene for the chosen viruses as log2FoldChange (LFC) over time. The stars represent the significance of the LFC."),
       HTML("<br><br>"),
@@ -985,16 +985,16 @@ server = function(input, output, session) {
       size = "l",
       tags$div("This tab is meant to compare the genes that are differentially expressed after the infection with different viruses.",
       "The sidebar shows the available options to adapt the plots:"),
-      img(src="viruses_sidebar.jpg"),
+      img(src="viruses_sidebar.png"),
       HTML("<br><br>"),
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout ", tags$a("(info)", href = "https://jku-vds-lab.at/tools/upset/", target="_blank"), ".",
       "This approach allows to compare a large number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots.",
       "For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered differentially expressed if: log2FoldChange (LFC) > ",tags$i("LFC cutoff")," and adjusted p-value (padj) < 0.05 and a normalized gene count of at least one sample ≥ 10."),
-      img(src="viruses_upset.jpg"),
-      tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded in xlsx or csv format.",
+      img(src="viruses_upset.png"),
+      tags$div("Genes in an intersection can be listed in a sortable table along with a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded in xlsx or csv format and then also contains the LFC and padj for all selected conditions.",
       "The selected bar in the example (colored orange) shows, that there are 218 genes that are diff. expressed in at least one of the included time points (see bar) in MARV, EBOV and NIV (see black dots in column below)."),
       HTML("<br><br>"),
-      img(src="viruses_upset_select.jpg"),
+      img(src="viruses_upset_select.png"),
       HTML("<br><br>"),
       tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'.")
     ))
@@ -1076,15 +1076,15 @@ server = function(input, output, session) {
       title = tags$div("Help for ", tags$b("Heatmap Virus Comparison")),
       size = "l",
       tags$div("This tab shows the corresponding heatmap after an intersection is selected in the tab 'Virus Comparison'."),
-      img(src="viruses_heatmap.jpg"),
-      tags$div("The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot: "),
+      img(src="viruses_heatmap.png"),
+      tags$div("The modebar in the upper right corner of the plot shows the following functions, that allow the user to interact with the plot: "),
       HTML("<br><br>"),
       img(src="heatmap_modebar.png"),
       HTML("<br><br>"),
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
       HTML("<br><br>"),
-      img(src="viruses_heatmap_zoom.jpg"),
-      img(src="viruses_heatmap_zoom2.jpg")
+      img(src="viruses_heatmap_zoom.png"),
+      img(src="viruses_heatmap_zoom2.png")
     ))
   })
   
@@ -1139,12 +1139,12 @@ server = function(input, output, session) {
       HTML("<br>"),
       img(src="snp_sidebar.png"),
       HTML("<br><br>"),
-      tags$div("The modebar in the right upper corner of the plot shows the following functions, that allow the user to interact with the plot: "),
+      tags$div("The modebar in the upper right corner of the plot shows the following functions, that allow the user to interact with the plot: "),
       HTML("<br>"),
       img(src="snp_modebar.png"),
       HTML("<br><br>"),
       tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over a cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s) as well as the frequency of a SNP and the read depth at the SNP position."),
-      img(src="snp_mouseover.jpg")
+      img(src="snp_mouseover.png")
     ))
   })
   
