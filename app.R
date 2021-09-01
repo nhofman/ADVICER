@@ -377,8 +377,7 @@ server = function(input, output, session) {
     #Sys.sleep(5)
     names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
     names(datasetInput) <- sub("Vs","vs", names(datasetInput))
-    datasetInput <- datasetInput[mixedorder(names(datasetInput))]
-    
+    datasetInput <- datasetInput[mixedorder(sub("vs_Mock_","",names(datasetInput)))]
     vcf.list <- lapply(vcf.files, read.vcfR)
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
   })
