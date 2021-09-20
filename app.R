@@ -42,15 +42,6 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   if(!is.na(filter_col)){
     xx <- xx[,which(colMaxs(as.matrix(abs(xx)))>filter_col)]
   }
-  #print(seq(quantile(xx.unlist, na.rm = TRUE, probs = (1-legend.limit)), quantile(xx.unlist, na.rm = TRUE, probs = legend.limit), break_step))
-  #breakSeq <- seq(quantile(xx.unlist, na.rm = TRUE, probs = (1-legend.limit)), quantile(xx.unlist, na.rm = TRUE, probs = legend.limit), break_step)
-  #if(length(breakSeq)==1){
-  #    if(sign(breakSeq)==1){
-  #        breakSeq <- seq(0,breakSeq,break_step)
-  #    }else{
-  #        breakSeq <- seq(breakSeq,0,break_step)
-  #    }
-  #}
   xx.unlist <- as.numeric(unlist(xx))
   color <- vector()
   if(-1 %in% sign(xx.unlist)){
@@ -407,7 +398,8 @@ server = function(input, output, session) {
           tags$li("log10(padj): logarithmic padj used in Volcano plot"),
           tags$li("normalized_[sample-name]: normalized read counts for every replicate")
         )),
-      "These data are used as a basis for all analyses and visualizations in the following tabs."
+      "These data are used as a basis for all analyses and visualizations in the following tabs.",
+      easyClose = TRUE
     ))
   })
   
@@ -446,17 +438,7 @@ server = function(input, output, session) {
     contentType = "csv"
   )
   
-  output$debug <- renderPrint({
-    orca_sys <- Sys.which("orca") 
-    #orca_help <- base::system("orca -h", intern = T) 
-    #orca_help <- processx::run("orca", "-h")
-    cat(paste("Orca\n"))
-    cat(paste("Sys.which:", orca_sys))
-    #cat(paste("\nOrca help:", orca_help$stdout))
-    cat(paste("\nPATH:",Sys.getenv("PATH")))
-  })
-  
-  ## Volcano Plot / MAPlot
+  ## Volcano Plot / MA-Plot
   
   # Help text
   observeEvent(input$help1,{
@@ -477,7 +459,8 @@ server = function(input, output, session) {
       tags$div("Further information for one or multiple points, like gene symbol, LFC and padj, can be shown by mouse over."),
       img(src="volcano_plot_select.png"),
       tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order."),
-      img(src="Volcano_table.png")
+      img(src="Volcano_table.png"),
+      easyClose = TRUE
     ))
   })
   
@@ -588,11 +571,6 @@ server = function(input, output, session) {
       file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                               ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
-      #p <- ggplot(file.data, aes(x = log2FoldChange, y = -log(padj), color = col, text = SYMBOL)) +
-      #  geom_point(aes(size = 0.4)) +
-      #  xlab("log fold change") + ylab("-log10(P-value)") + scale_color_manual(values = c("yellow", "purple", "black")) + 
-      #  theme(legend.position = "bottom", legend.direction = "horizontal", axis.title = element_text(size = 16, face = "bold"), axis.text = element_text(size = 16, face = "bold"))
-      #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
       p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
@@ -664,11 +642,7 @@ server = function(input, output, session) {
     content = function(f){
       data.df <- data$heat_data
       hover <- data$heat_hover
-      #if(!is.null(data.df)){
       plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover, file = f)
-      #}else{
-      #  return(NULL)
-      #}
       #orca(f, p, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl"))
     }
   )
@@ -716,7 +690,8 @@ server = function(input, output, session) {
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
       HTML("<br><br>"),
       img(src="time_heatmap_zoom.png"),
-      img(src="time_heatmap_zoom2.png")
+      img(src="time_heatmap_zoom2.png"),
+      easyClose = TRUE
     ))
   })
   
@@ -754,7 +729,6 @@ server = function(input, output, session) {
     if(is.null(input$select_v) | is.null(input$time) | is.null(virus_id)){
       return(NULL)
     }else{
-      #print(paste0(input$select_v, ".*_", input$time, collapse = "|"))
       data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
         y <- datasetInput[[x]]
         #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
@@ -908,6 +882,7 @@ server = function(input, output, session) {
       tags$div("The plot shows the expression of the selected gene as LFC. The left hand side shows the 24 h time point of the selected viruses compared to the inactivated virus (Virus BPL), whereas the right hand side shows the inactivated virus compared to the uninfected control (Mock BPL)."),
       HTML("<br><br>"),
       img(src="expression_plot_lower.png"),
+      easyClose = TRUE
     ))
   })
   
@@ -995,7 +970,8 @@ server = function(input, output, session) {
       HTML("<br><br>"),
       img(src="viruses_upset_select.png"),
       HTML("<br><br>"),
-      tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'.")
+      tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'."),
+      easyClose = TRUE
     ))
   })
   
@@ -1083,7 +1059,8 @@ server = function(input, output, session) {
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
       HTML("<br><br>"),
       img(src="viruses_heatmap_zoom.png"),
-      img(src="viruses_heatmap_zoom2.png")
+      img(src="viruses_heatmap_zoom2.png"),
+      easyClose = TRUE
     ))
   })
   
@@ -1143,7 +1120,8 @@ server = function(input, output, session) {
       img(src="snp_modebar.png"),
       HTML("<br><br>"),
       tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over a cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s) as well as the frequency of a SNP and the read depth at the SNP position."),
-      img(src="snp_mouseover.png")
+      img(src="snp_mouseover.png"),
+      easyClose = TRUE
     ))
   })
   
