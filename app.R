@@ -673,25 +673,29 @@ server = function(input, output, session) {
     }
   )
   
-  # select times to plot
-  output$selectTime <- renderUI({
-    checkboxGroupInput("time", label = "Choose time points (for Venn: max. 5)",
-                       choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
-                                                   function(x){
-                                                     #s <- sub("^[^_]*_","",x)
-                                                     #s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x)) #ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
-                                                     s <- sub("_vs_", " : ", x)
-                                                     #s <- sub("48h$", "48h (HCV only)", s)
-                                                     return(s)
-                                                   }, USE.NAMES = F)),
-                       choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
-  })
-  
   # select virus
   output$selectVirus1 <- renderUI({
     selectInput("select_v", label = h5(strong("Select virus")), 
                 choices = unique(sub("_.*","",names(datasetInput))), 
                 selected = NULL)
+  })
+  
+  print(names(datasetInput))
+  
+  # select times to plot
+  output$selectTime <- renderUI({
+    if(!is.null(input$select_v)){
+      checkboxGroupInput("time", label = "Choose time points (for Venn: max. 5)",
+                         choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
+                                                     function(x){
+                                                       #s <- sub("^[^_]*_","",x)
+                                                       #s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x)) #ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
+                                                       s <- sub("_vs_", " : ", x)
+                                                       #s <- sub("48h$", "48h (HCV only)", s)
+                                                       return(s)
+                                                     }, USE.NAMES = F)),
+                         choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
+    }
   })
   
   
@@ -831,7 +835,7 @@ server = function(input, output, session) {
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
         return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
-      id.list <- id.list[sapply(id.list, length) > 0]
+      #id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
@@ -857,7 +861,7 @@ server = function(input, output, session) {
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
         return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
-      id.list <- id.list[sapply(id.list, length) > 0]
+      #id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
@@ -1161,6 +1165,9 @@ server = function(input, output, session) {
   
   # plot SNPs for selected  virus as heatmap
   output$heatSNP <- renderPlotly({
+    if(is.null(input$virusSNP)){
+      return(NULL)
+    }
     v <- input$virusSNP
     v.df <- Reduce(rbind, sapply(names(vcf.list[grep(v, names(vcf.list))]), function(n){
       x <- vcf.list[[n]]
