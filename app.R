@@ -54,7 +54,6 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   }
   if((nrow(xx)>1 | ncol(xx)>1)){
     if(setWidth){
-      #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
       if(!is.na(file)){
         p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
       }else{
@@ -67,12 +66,6 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
         p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
       }
     }
-    #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
-    #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
-    #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
-    #         breaks = breakSeq, color = color, annotation_colors = annotation_colors,
-    #         fontsize_row = fontsize_row, fontsize_col = fontsize_col, cutree_rows = clrn, 
-    #         border_color = border_col, display_numbers = display_numbers)
   }
   return(p)
 }
@@ -88,9 +81,7 @@ plotExpression <- function(expr.df, padj.df, gene){
   lfc.gene$padj <- t(padj.df[gene,])
   lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*",NA)))
   lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
-  #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
-  #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
-  lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
+  lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) 
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
   lfc.min <- min(lfc.gene$symbol)
   lfc.max <- max(lfc.gene$symbol) + 0.25
@@ -108,9 +99,6 @@ plotExpression <- function(expr.df, padj.df, gene){
           legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
           axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
-  #p <- c(p1, p2)
-  #gridExtra::grid.arrange(p1, p2, ncol = 1)
-  #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
   return(p)
 }
@@ -120,7 +108,6 @@ if(Sys.getenv("DATADIR") != ""){
   shinyOptions(filedir = Sys.getenv("DATADIR"))
 }
 Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Platform$path.sep))
-#addResourcePath("imgResources", "Documents/Virus_project/virus-shiny-app/")
 
 datasetInput <- NULL
 # Define UI for application that draws a histogram
@@ -166,16 +153,9 @@ ui <- fluidPage(
   navbarPage(
     "DGE analysis", 
     tabPanel("Download Data",
-             #sidebarPanel(
-             #    fileInput("file", label = h5(br("File input")), multiple = T),
-             #),
              sidebarPanel(
-               #textOutput("uploadText"),
-               #br(),
                div(style = "text-align:right", actionButton("help0", label = div(strong("Help"), icon("question")))),
                htmlOutput("download"),
-               #tableOutput("table"),
-               #h2("Uploaded files"),
              ),
              mainPanel(
                downloadButton("filesDown", "Download selected files"),
@@ -184,8 +164,6 @@ ui <- fluidPage(
     ),
     tabPanel("Volcano Plot / MA-Plot",
              sidebarPanel(
-               #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
-               #div(style = "text-align:right", h5(strong("Help"))),
                div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed plot")), choices = c("Volcano plot", "MA-plot"), selected = "Volcano plot"),
@@ -196,14 +174,10 @@ ui <- fluidPage(
                            value = 1, 
                            step = 0.5),
                br(),
-               #downloadButton("downSingle", "Download")
              ),
              mainPanel(
-               #downloadButton("downPlot", "Download plot"),
-               #actionButton("export", "Export plot"),
                conditionalPanel(
                  condition = 'input.plotTypeSingle == "Volcano plot"',
-                 #d.V <- vector(),
                  plotlyOutput("volcanoPlot", height = "500px"),
                  br(),
                  dataTableOutput("clickVP")
@@ -228,7 +202,6 @@ ui <- fluidPage(
                            value = 1, 
                            step = 0.5),
                actionButton("addHeat", "Show heatmap"),
-               #downloadButton("downHeatTime", "Download heatmap"),
                br(),
                br(),
                h5(strong("Download table")),
@@ -247,7 +220,6 @@ ui <- fluidPage(
                  DT::dataTableOutput("clickedElements"),
                  br(),
                  br(),
-                 #plotOutput("heatmapTimeUp", height = "750px")
                ),
                conditionalPanel(
                  condition = 'input.plotType == "Venn"',
@@ -256,7 +228,6 @@ ui <- fluidPage(
                  DT::dataTableOutput("clickedElementsVenn"),
                  br(),
                  br(),
-                 #plotOutput("heatmapTimeVenn", height = "750px")
                ),
                plotlyOutput("heatmapTime", height = "750px"),
                
@@ -274,7 +245,6 @@ ui <- fluidPage(
              mainPanel(
                plotOutput("geneX", height = 1000),
                br(),
-               #tableOutput("sig")
              )),
     tabPanel("Virus Comparison",
              sidebarPanel(
@@ -282,9 +252,6 @@ ui <- fluidPage(
                htmlOutput("selectVirus3"),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
-               #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
-               #                   choices = list("")),
-               #choices = c("infected"="Mock_.*h", "inactivated control"="24h_vs_.*BPL", "uninfected control"="Mock_BPL")),
                br(),
                br(),
                sliderInput("LFCall",
@@ -331,10 +298,7 @@ ui <- fluidPage(
                htmlOutput("selectVirus4")
              ),
              mainPanel(
-               #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
-               #DT::dataTableOutput("SNPdata")
                plotlyOutput("heatSNP", height = "1000px"),
-               #verbatimTextOutput("SNPdata")
              ))
   )
 )
@@ -680,18 +644,13 @@ server = function(input, output, session) {
                 selected = NULL)
   })
   
-  print(names(datasetInput))
-  
   # select times to plot
   output$selectTime <- renderUI({
     if(!is.null(input$select_v)){
       checkboxGroupInput("time", label = "Choose time points (for Venn: max. 5)",
                          choiceNames = unique(sapply(names(datasetInput)[grep(input$select_v, names(datasetInput))], 
                                                      function(x){
-                                                       #s <- sub("^[^_]*_","",x)
-                                                       #s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x)) #ifelse(grepl("Mock",x), sub("_Mock_.*","_Mock",s), s)
                                                        s <- sub("_vs_", " : ", x)
-                                                       #s <- sub("48h$", "48h (HCV only)", s)
                                                        return(s)
                                                      }, USE.NAMES = F)),
                          choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
