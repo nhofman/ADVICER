@@ -1142,7 +1142,7 @@ server = function(input, output, session) {
   # select virus
   output$selectVirus4 <- renderUI({
     selectInput("virusSNP", label = h5(strong("Select virus")), 
-                choices = unique(sub("_.*","",names(vcf.files))), 
+                choices = unique(sub("_.*","",names(vcf.list))), 
                 selected = NULL)
   })
   
