@@ -219,9 +219,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help2", label = div(strong("Help"), icon("question")))),
                radioButtons("plotType", label = h5(strong("Displayed plot")), choiceNames = c("Venn diagram", "UpSet plot"), choiceValues = c("Venn", "UpSet"), selected = "Venn"),
-               selectInput("select_v", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                           selected = NULL),
+               htmlOutput("selectVirus1"),
                htmlOutput("selectTime"),
                sliderInput("LFC",
                            h5(strong("LFC cutoff:")),
@@ -267,9 +265,7 @@ ui <- fluidPage(
     tabPanel("Gene Expression",
              sidebarPanel(
                div(style = "text-align:right", actionButton("help3", label = div(strong("Help"), icon("question")))),
-               checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                                  selected = NULL),
+               htmlOutput("selectVirus2"),
                textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
                h5(strong("Download plot")),
                downloadButton("downGeneXpng","Download as png"),
@@ -283,9 +279,7 @@ ui <- fluidPage(
     tabPanel("Virus Comparison",
              sidebarPanel(
                div(style = "text-align:right", actionButton("help4", label = div(strong("Help"), icon("question")))),
-               checkboxGroupInput("select", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                                  selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
+               htmlOutput("selectVirus3"),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
                #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
@@ -334,9 +328,7 @@ ui <- fluidPage(
     tabPanel("SNP Analysis",
              sidebarPanel(
                div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
-               selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
-                           selected = NULL)
+               htmlOutput("selectVirus4")
              ),
              mainPanel(
                #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
@@ -606,6 +598,40 @@ server = function(input, output, session) {
   
   ## Compare time points of defined virus
   
+  # Help text 
+  observeEvent(input$help2,{
+    showModal(modalDialog(
+      title = tags$div("Help for ", tags$b("Compare Time Points")),
+      size = "l",
+      tags$div("This tab is meant to compare the differential gene expression between different time points of infection. Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample ≥ 10. Intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), ". The sidebar shows the available options to adapt the plots:"),
+      img(src="time_sidebar.png"),
+      "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
+      img(src="time_venn.png"),
+      tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. The table can be downloaded as xlsx or csv file."),
+      HTML("<br><br>"),
+      img(src="time_venn_select.png"),
+      HTML("<br><br>"),
+      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 4467 genes are differentially expressed (see bar) after 6h, 12h and 24h (see black dots in column below)."),
+      img(src="time_upset.png"),
+      tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."),
+      HTML("<br><br>"),
+      img(src="time_upset_select.png"),
+      HTML("<br><br>"),
+      tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:"),
+      img(src="time_heatmap.png"),
+      HTML("<br><br>"),
+      tags$div("The modebar in the upper right corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
+      HTML("<br><br>"),
+      img(src="heatmap_modebar.png"),
+      HTML("<br><br>"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
+      HTML("<br><br>"),
+      img(src="time_heatmap_zoom.png"),
+      img(src="time_heatmap_zoom2.png"),
+      easyClose = TRUE
+    ))
+  })
+  
   # download genes of selected plot area as csv or xlsx
   output$down_vCSV <- downloadHandler(
     filename = function(){
@@ -661,39 +687,13 @@ server = function(input, output, session) {
                        choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
   })
   
-  # Help text 
-  observeEvent(input$help2,{
-    showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("Compare Time Points")),
-      size = "l",
-      tags$div("This tab is meant to compare the differential gene expression between different time points of infection. Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample ≥ 10. Intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), ". The sidebar shows the available options to adapt the plots:"),
-      img(src="time_sidebar.png"),
-      "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
-      img(src="time_venn.png"),
-      tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. The table can be downloaded as xlsx or csv file."),
-      HTML("<br><br>"),
-      img(src="time_venn_select.png"),
-      HTML("<br><br>"),
-      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 4467 genes are differentially expressed (see bar) after 6h, 12h and 24h (see black dots in column below)."),
-      img(src="time_upset.png"),
-      tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."),
-      HTML("<br><br>"),
-      img(src="time_upset_select.png"),
-      HTML("<br><br>"),
-      tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:"),
-      img(src="time_heatmap.png"),
-      HTML("<br><br>"),
-      tags$div("The modebar in the upper right corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
-      HTML("<br><br>"),
-      img(src="heatmap_modebar.png"),
-      HTML("<br><br>"),
-      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
-      HTML("<br><br>"),
-      img(src="time_heatmap_zoom.png"),
-      img(src="time_heatmap_zoom2.png"),
-      easyClose = TRUE
-    ))
+  # select virus
+  output$selectVirus1 <- renderUI({
+    selectInput("select_v", label = h5(strong("Select virus")), 
+                choices = unique(sub("_.*","",names(datasetInput))), 
+                selected = NULL)
   })
+  
   
   # set heatmap to NULL at selecion of new virus
   observeEvent(input$select_v, {
@@ -903,6 +903,13 @@ server = function(input, output, session) {
     }
   )
   
+  # select virus
+  output$selectVirus2 <- renderUI({
+    checkboxGroupInput("selectVirus", label = h5(strong("Select virus")), 
+                choices = unique(sub("_.*","",names(datasetInput))), 
+                selected = NULL)
+  })
+  
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
     p <- data$plotX
@@ -939,19 +946,6 @@ server = function(input, output, session) {
   
   ## Virus comparison
   
-  # select time points to include in comparison
-  output$selectCond <- renderUI({
-    checkboxGroupInput("cond", label = "Choose time points", 
-                       choiceNames = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
-                                                   function(x){
-                                                     s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x))
-                                                     s <- sub("_vs_", " : ", s)
-                                                     s <- sub("48h$", "48h (HCV only)", s)
-                                                     return(s)
-                                                   }, USE.NAMES = F)),
-                       choiceValues = unique(sapply(unique(sub(".*vs","vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
-  })
-  
   # Help text
   observeEvent(input$help4,{
     showModal(modalDialog(
@@ -973,6 +967,26 @@ server = function(input, output, session) {
       tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'."),
       easyClose = TRUE
     ))
+  })
+  
+  # select time points to include in comparison
+  output$selectCond <- renderUI({
+    checkboxGroupInput("cond", label = "Choose time points", 
+                       choiceNames = unique(sapply(unique(sub("[^_]*_","Virus_",names(datasetInput))), 
+                                                   function(x){
+                                                     s <- ifelse(grepl("Mock",x), x, sub("vs_.*_","vs_Virus_",x))
+                                                     s <- sub("_vs_", " : ", s)
+                                                     s <- sub("48h$", "48h (HCV only)", s)
+                                                     return(s)
+                                                   }, USE.NAMES = F)),
+                       choiceValues = unique(sapply(unique(sub(".*vs","vs",names(datasetInput))), function(x) if(grepl("Mock",x)){return(x)}else{return(sub("_.*_","_Virus_",x))}, USE.NAMES = F)))
+  })
+  
+  # select virus
+  output$selectVirus3 <- renderUI({
+    checkboxGroupInput("select", label = h5(strong("Select virus")), 
+                choices = unique(sub("_.*","",names(datasetInput))), 
+                selected = NULL)
   })
   
   all.df <- reactive({
@@ -1123,6 +1137,13 @@ server = function(input, output, session) {
       img(src="snp_mouseover.png"),
       easyClose = TRUE
     ))
+  })
+  
+  # select virus
+  output$selectVirus4 <- renderUI({
+    selectInput("virusSNP", label = h5(strong("Select virus")), 
+                choices = unique(sub("_.*","",names(vcf.files))), 
+                selected = NULL)
   })
   
   # add vertical line to plot
