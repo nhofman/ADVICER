@@ -246,7 +246,7 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg","Download as svg")
              ), 
              mainPanel(
-               textOutput("debug", container = pre),
+               #textOutput("debug", container = pre),
                plotOutput("geneX", height = 1000),
                br(),
              )),
@@ -880,11 +880,11 @@ server = function(input, output, session) {
   )
   
   # select virus
-  output$selectVirus2 <- renderUI({
-    checkboxGroupInput("selectVirus", label = h5(strong("Select virus")), 
-                choices = unique(sub("_.*","",names(datasetInput))), 
-                selected = NULL)
-  })
+  #output$selectVirus2 <- renderUI({
+  #  checkboxGroupInput("selectVirus", label = h5(strong("Select virus")), 
+  #              choices = unique(sub("_.*","",names(datasetInput))), 
+  #              selected = NULL)
+  #})
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
@@ -900,10 +900,10 @@ server = function(input, output, session) {
     list(input$selectVirus, input$gene)
   })
   
-  output$debug <- renderPrint({
-    print(input$selectVirus)
-    print(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]))
-  })
+  #output$debug <- renderPrint({
+  #  print(input$selectVirus)
+  #  print(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]))
+  #})
   
   observeEvent(plot_geneX(), {
     if(is.null(input$selectVirus) | is.null(input$gene)){
