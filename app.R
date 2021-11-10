@@ -763,6 +763,11 @@ server = function(input, output, session) {
     data$heat <- NULL
   })
   
+  observeEvent(input$select_v,{
+    data$dt <- NULL
+    data$heat <- NULL
+  })
+  
   observeEvent(input$upset_click$elems,{
     data$dt <- 1
     #return(unlist(input$upset_click$elems))
@@ -797,8 +802,8 @@ server = function(input, output, session) {
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
-      if(ength(id.list)>0){
-        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      if(length(id.list)>0){
+        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
       }
     }
   })
