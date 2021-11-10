@@ -823,8 +823,9 @@ server = function(input, output, session) {
       #id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
-      print(id.list)
-      print(class(id.list))
+      #print(id.list)
+      tmp <- sapply(id.list, function(x){print(class(x));print(x)}, simplify = F)
+      print(installed.packages()[,c(1,3)])
     }
   })
   
