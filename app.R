@@ -223,6 +223,7 @@ ui <- fluidPage(
                ),
                conditionalPanel(
                  condition = 'input.plotType == "Venn"',
+                 textOutput("debug", container = pre),
                  upsetjsOutput("upsetVenn"), #, click = "upsetClick"),
                  br(),
                  DT::dataTableOutput("clickedElementsVenn"),
@@ -812,6 +813,21 @@ server = function(input, output, session) {
     }
   }, escape = F)
   
+  output$debug <- renderPrint({
+    if(is.null(input$select_v) | is.null(input$time)){
+      return(NULL)
+    }else{
+      id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
+        return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
+      })
+      #id.list <- id.list[sapply(id.list, length) > 0]
+      names(id.list) <- sub(".*_vs_", "", names(id.list))
+      names(id.list) <- sub("Mock_", "", names(id.list))
+      print(id.list)
+      print(class(id.list))
+    }
+  })
+  
   # plot Venn diagram of selected virus und times
   output$upsetVenn <- renderUpsetjs({
     if(is.null(input$select_v) | is.null(input$time)){
@@ -823,6 +839,9 @@ server = function(input, output, session) {
       #id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
+      print("New selection")
+      print(id.list)
+      print(class(id.list))
       upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
     }
   })
