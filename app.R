@@ -243,6 +243,7 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg","Download as svg")
              ), 
              mainPanel(
+               textOutput("debug", container = pre),
                plotOutput("geneX", height = 1000),
                br(),
              )),
@@ -894,6 +895,11 @@ server = function(input, output, session) {
   
   plot_geneX <- reactive({
     list(input$selectVirus, input$gene)
+  })
+  
+  output$debug <- renderPrint({
+    print(input$selectVirus)
+    print(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]))
   })
   
   observeEvent(plot_geneX(), {
