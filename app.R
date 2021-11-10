@@ -236,7 +236,10 @@ ui <- fluidPage(
     tabPanel("Gene Expression",
              sidebarPanel(
                div(style = "text-align:right", actionButton("help3", label = div(strong("Help"), icon("question")))),
-               htmlOutput("selectVirus2"),
+               #htmlOutput("selectVirus2"),
+               checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
+                                  choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "LASV"), 
+                                  selected = NULL),
                textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
                h5(strong("Download plot")),
                downloadButton("downGeneXpng","Download as png"),
