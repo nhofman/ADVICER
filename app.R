@@ -914,20 +914,22 @@ server = function(input, output, session) {
   })
   
   plot_geneX <- reactive({
-    list(input$selectVirus, input$gene)
+    #list(input$selectVirus, input$gene)
+    list(input$gene)
   })
   
   observeEvent(plot_geneX(), {
-    if(is.null(input$selectVirus) | is.null(input$gene)){
+    if(is.null(input$gene)){
       return(NULL)
     }else{
-      lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+      selectVirus <- "RSV"
+      lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(selectVirus, collapse = "|"), names(datasetInput))]), function(x){
         x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$log2FoldChange)
         colnames(x.df) <- c("SYMBOL",x)
         return(x.df)}))
       rownames(lfc.df) <- lfc.df$SYMBOL
       lfc.df <- lfc.df[,-1]
-      padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+      padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(selectVirus, collapse = "|"), names(datasetInput))]), function(x){
         x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$padj)
         colnames(x.df) <- c("SYMBOL",x)
         return(x.df)}))
