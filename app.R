@@ -220,7 +220,7 @@ ui <- fluidPage(
                div(style = "text-align:right", actionButton("help2", label = div(strong("Help"), icon("question")))),
                radioButtons("plotType", label = h5(strong("Displayed plot")), choiceNames = c("Venn diagram", "UpSet plot"), choiceValues = c("Venn", "UpSet"), selected = "Venn"),
                selectInput("select_v", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL),
                htmlOutput("selectTime"),
                sliderInput("LFC",
@@ -268,7 +268,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help3", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                                   selected = NULL),
                textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
                h5(strong("Download plot")),
@@ -284,8 +284,8 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help4", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("select", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-                                  selected = NULL), 
+                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                  selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
                #checkboxGroupInput("selectCond", label = h5(strong(" Select conditions to include")), 
@@ -335,7 +335,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
                selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
                            selected = NULL)
              ),
              mainPanel(
@@ -914,22 +914,20 @@ server = function(input, output, session) {
   })
   
   plot_geneX <- reactive({
-    #list(input$selectVirus, input$gene)
-    list(input$gene)
+    list(input$selectVirus, input$gene)
   })
   
   observeEvent(plot_geneX(), {
-    if(is.null(input$gene)){
+    if(is.null(input$selectVirus) | is.null(input$gene)){
       return(NULL)
     }else{
-      selectVirus <- "RSV"
-      lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+      lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
         x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$log2FoldChange)
         colnames(x.df) <- c("SYMBOL",x)
         return(x.df)}))
       rownames(lfc.df) <- lfc.df$SYMBOL
       lfc.df <- lfc.df[,-1]
-      padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(selectVirus, collapse = "|"), names(datasetInput))]), function(x){
+      padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
         x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$padj)
         colnames(x.df) <- c("SYMBOL",x)
         return(x.df)}))
