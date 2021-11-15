@@ -580,30 +580,6 @@ server = function(input, output, session) {
     }
   })
   
-  output$downPlot <- downloadHandler(
-    filename = function(){
-      return(paste0(input$plotTypeSingle,"_",input$fileToPlot,".pdf"))
-    },
-    content = function(f){
-      print(basename(f))
-      print(dirname(f))
-      if(input$plotTypeSingle=="MAPlot"){
-        orca(plotMA(), basename(f),"pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", dirname(f)))
-      }else{
-        orca(plotVolcano(), file = basename(f), format = "pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", dirname(f)))
-      } 
-    }, contentType = "application/pdf"
-  )
-  
-  observeEvent(input$export, {
-    f <- paste0(input$plotTypeSingle,"_",input$fileToPlot,".pdf")
-    if(input$plotTypeSingle=="MAPlot"){
-      orca(plotMA(), f,"pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", "~/Downloads/"))
-    }else{
-      orca(plotVolcano(), file = f, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl", "-d", "~/Downloads/"))
-    } 
-  })
-  
   ## Compare time points of defined virus
   
   # download genes of selected plot area as csv or xlsx
@@ -642,7 +618,7 @@ server = function(input, output, session) {
     content = function(f){
       data.df <- data$heat_data
       hover <- data$heat_hover
-      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover, file = f)
+      p <- plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover, file = f)
       #orca(f, p, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl"))
     }
   )
@@ -741,18 +717,6 @@ server = function(input, output, session) {
       data.df$Link <- createLink(data.df$SYMBOL)
       #data$virus.df <- data.df
       return(data.df)
-    }
-  })
-  
-  # plot heatmap
-  plot_heat_time <- reactive({
-    data.df <- data$heat_data
-    hover <- data$heat_hover
-    if(!is.null(data.df)){
-      p <- plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
-      return(p)
-    }else{
-      return(NULL)
     }
   })
   
