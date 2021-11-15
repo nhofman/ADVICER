@@ -855,7 +855,10 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
     content = function(f){
-      ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
+      #ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
+      png(f, width = 8, height = 10, dpi = 400)
+      plot(data$plotX)
+      dev.off()
     }
   )
   
@@ -863,7 +866,10 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
     content = function(f){
-      ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
+      #ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
+      svg(f, width = 8, height = 10, dpi = 400)
+      plot(data$plotX)
+      dev.off()
     }
   )
   
