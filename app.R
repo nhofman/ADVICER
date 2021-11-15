@@ -687,8 +687,8 @@ server = function(input, output, session) {
     data.df <- data$heat_data
     hover <- data$heat_hover
     if(!is.null(data.df)){
-      p <- plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
-      print(p)
+      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
+      #print(p)
     }else{
       return(NULL)
     }
