@@ -538,7 +538,7 @@ server = function(input, output, session) {
     #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
     p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="blue","not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
-                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
+                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                  source = "V")
     p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
     return(p)
@@ -575,7 +575,7 @@ server = function(input, output, session) {
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
       p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
-                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', log2FoldChange, '<br>padj: ', padj),
+                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                    source = "M")
       p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
       return(p)
@@ -786,6 +786,7 @@ server = function(input, output, session) {
     }else{
       df <- virus.df()
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
+      return(df)
       #data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
     }
   }, escape = F)
@@ -813,7 +814,9 @@ server = function(input, output, session) {
     if(is.null(dt)){
       return(NULL)
     }else{
-      virus.df()
+      df <- virus.df()
+      df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
+      return(df)
     }
   }, escape = F)
   
