@@ -794,7 +794,7 @@ server = function(input, output, session) {
       return(NULL)
     }else{
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
-        return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
+        return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
