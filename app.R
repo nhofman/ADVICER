@@ -220,7 +220,7 @@ ui <- fluidPage(
                div(style = "text-align:right", actionButton("help2", label = div(strong("Help"), icon("question")))),
                radioButtons("plotType", label = h5(strong("Displayed plot")), choiceNames = c("Venn diagram", "UpSet plot"), choiceValues = c("Venn", "UpSet"), selected = "Venn"),
                selectInput("select_v", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                            selected = NULL),
                htmlOutput("selectTime"),
                sliderInput("LFC",
@@ -268,7 +268,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help3", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                  choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                                   selected = NULL),
                textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
                h5(strong("Download plot")),
@@ -276,7 +276,7 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg","Download as svg")
              ), 
              mainPanel(
-               textOutput("debug", container = pre),
+               #textOutput("debug", container = pre),
                plotOutput("geneX", height = 1000),
                br(),
                #tableOutput("sig")
@@ -285,7 +285,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help4", label = div(strong("Help"), icon("question")))),
                checkboxGroupInput("select", label = h5(strong("Select viruses")), 
-                                  choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                                  choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                                   selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")),
                htmlOutput("selectCond"),
                em("(BPL samples were taken after 24h)"),
@@ -336,7 +336,7 @@ ui <- fluidPage(
              sidebarPanel(
                div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
                selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV", "MARV", "HCV", "LASV"), 
+                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                            selected = NULL)
              ),
              mainPanel(
