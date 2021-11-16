@@ -350,7 +350,7 @@ ui <- fluidPage(
 
 # Define directory containing data
 filedir <- getShinyOption("filedir")
-files.list <- list.files(filedir, pattern = "deseq2_.*.csv", full.names = T)
+files.list <- list.files(filedir, pattern = ".*.csv", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -375,10 +375,10 @@ server = function(input, output, session) {
   })
   
   # round numeric values
-  datasetInput <- lapply(datasetInput, function(x){
-    x[,c(5:ncol(x))] <- signif(x[,c(5:ncol(x))], 4)
-    return(x)
-  })
+  #datasetInput <- lapply(datasetInput, function(x){
+  #  x[,c(5:ncol(x))] <- signif(x[,c(5:ncol(x))], 4)
+  #  return(x)
+  #})
   
   # Help text
   observeEvent(input$help0,{
@@ -793,6 +793,7 @@ server = function(input, output, session) {
     if(is.null(input$select_v) | is.null(input$time)){
       return(NULL)
     }else{
+      print(paste0(input$select_v, ".*_", input$time, collapse = "|"))
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
         return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
