@@ -350,7 +350,7 @@ ui <- fluidPage(
 
 # Define directory containing data
 filedir <- getShinyOption("filedir")
-files.list <- list.files(filedir, pattern = "*.csv", full.names = T)
+files.list <- list.files(filedir, pattern = "deseq2_.*.csv", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define server logic 
@@ -799,7 +799,7 @@ server = function(input, output, session) {
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
-      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
     }
   })
   
@@ -820,7 +820,7 @@ server = function(input, output, session) {
       return(NULL)
     }else{
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
-        return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05, apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
+        return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
