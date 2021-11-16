@@ -173,12 +173,12 @@ ui <- fluidPage(
                #textOutput("uploadText"),
                #br(),
                div(style = "text-align:right", actionButton("help0", label = div(strong("Help"), icon("question")))),
-               htmlOutput("download"),
+               htmlOutput("download")
                #tableOutput("table"),
                #h2("Uploaded files"),
              ),
              mainPanel(
-               downloadButton("filesDown", "Download selected files"),
+               downloadButton("filesDown", "Download selected files")
                #textOutput("debug", container = pre)
              )
     ),
@@ -195,7 +195,7 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               br(),
+               br()
                #downloadButton("downSingle", "Download")
              ),
              mainPanel(
@@ -248,7 +248,7 @@ ui <- fluidPage(
                  br(),
                  DT::dataTableOutput("clickedElements"),
                  br(),
-                 br(),
+                 br()
                  #plotOutput("heatmapTimeUp", height = "750px")
                ),
                conditionalPanel(
@@ -257,7 +257,7 @@ ui <- fluidPage(
                  br(),
                  DT::dataTableOutput("clickedElementsVenn"),
                  br(),
-                 br(),
+                 br()
                  #plotOutput("heatmapTimeVenn", height = "750px")
                ),
                plotlyOutput("heatmapTime", height = "750px"),
@@ -278,7 +278,7 @@ ui <- fluidPage(
              mainPanel(
                #textOutput("debug", container = pre),
                plotOutput("geneX", height = 1000),
-               br(),
+               br()
                #tableOutput("sig")
              )),
     tabPanel("Virus Comparison",
@@ -319,7 +319,7 @@ ui <- fluidPage(
              mainPanel(
                upsetjsOutput("upsetAll"), #, click = "upsetClick"),
                br(),
-               DT::dataTableOutput("clickedElementsAll"),
+               DT::dataTableOutput("clickedElementsAll")
              )
     ),
     tabPanel("Heatmap Virus Comparison",
@@ -330,7 +330,6 @@ ui <- fluidPage(
              mainPanel(
                #downloadButton("downHeatAll", "Download heatmap"),
                plotlyOutput("heatmapAll", height = 1500)
-               
              )),
     tabPanel("SNP Analysis",
              sidebarPanel(
@@ -342,7 +341,7 @@ ui <- fluidPage(
              mainPanel(
                #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
                #DT::dataTableOutput("SNPdata")
-               plotlyOutput("heatSNP", height = "1000px"),
+               plotlyOutput("heatSNP", height = "1000px")
                #verbatimTextOutput("SNPdata")
              ))
   )
@@ -514,6 +513,7 @@ server = function(input, output, session) {
     }else{
       df <- datasetInput[[input$fileToPlot]]
       df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
+      df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
       df$NCBI <- createLink(df$SYMBOL)
       return(df)
     }
@@ -553,6 +553,7 @@ server = function(input, output, session) {
     }else{
       df <- datasetInput[[input$fileToPlot]]
       df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
+      df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
       df$NCBI <- createLink(df$SYMBOL)
       return(df)
     }
@@ -783,7 +784,8 @@ server = function(input, output, session) {
     if(is.null(dt)){
       data.frame("SYMBOL"=NULL, "LinkToNCBI"=NULL)
     }else{
-      virus.df()
+      df <- virus.df()
+      df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
       #data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
     }
   }, escape = F)
