@@ -112,7 +112,6 @@ plotExpression <- function(expr.df, padj.df, gene){
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
   #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
-  pdf(NULL)
   return(p)
 }
 
@@ -277,6 +276,7 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg","Download as svg")
              ), 
              mainPanel(
+               textOutput("debug", container = pre),
                plotOutput("geneX", height = 1000),
                br(),
                #tableOutput("sig")
@@ -849,6 +849,13 @@ server = function(input, output, session) {
       img(src="expression_plot_lower.png"),
       easyClose = TRUE
     ))
+  })
+  
+  output$debug <- renderPrint({
+    print("dev.list():")
+    print(dev.list())
+    print("Installed packages:")
+    print(installed.packages()[,c(1,3)])
   })
   
   # download gene expression plot
