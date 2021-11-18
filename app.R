@@ -52,21 +52,21 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     color_up <- colorRampPalette(c("white", "red"))(length(seq(0, quantile(xx.unlist, na.rm = TRUE, probs = legend.limit), break_step)))
     color <- c(color,color_up)
   }
-  if((nrow(xx)>1 | ncol(xx)>1)){
-    if(setWidth){
-      #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
-      if(!is.na(file)){
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
-      }else{
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
-      }
+  #if((nrow(xx)>1 | ncol(xx)>1)){
+  if(setWidth){
+    #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
+    if(!is.na(file)){
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
     }else{
-      if(!is.na(file)){
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
-      }else{
-        p <- heatmaply(xx, Colv = F, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
-      }
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
     }
+  }else{
+    if(!is.na(file)){
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
+    }else{
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
+    }
+    #}
     #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
     #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
@@ -112,6 +112,7 @@ plotExpression <- function(expr.df, padj.df, gene){
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
   #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
+  dev.off()
   return(p)
 }
 
@@ -121,6 +122,8 @@ if(Sys.getenv("DATADIR") != ""){
 }
 Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Platform$path.sep))
 #addResourcePath("imgResources", "Documents/Virus_project/virus-shiny-app/")
+
+setwd("/tmp/")
 
 datasetInput <- NULL
 # Define UI for application that draws a histogram
@@ -277,6 +280,7 @@ ui <- fluidPage(
              ), 
              mainPanel(
                #textOutput("debug", container = pre),
+               #verbatimTextOutput("geneX"),
                plotOutput("geneX", height = 1000),
                br()
                #tableOutput("sig")
@@ -673,13 +677,21 @@ server = function(input, output, session) {
     ))
   })
   
-  # set heatmap to NULL at selecion of new virus
+  # set heatmap to NULL at selection of new virus
   observeEvent(input$select_v, {
     data$heat <- NULL   
     data$dt <- NULL
+    data_heat_time()
   })
   
-  # add heatnmap
+  # clear data table and heatmap if plot type changes
+  observeEvent(input$plotType, {
+    data$heat <- NULL   
+    data$dt <- NULL
+    data_heat_time()
+  })
+  
+  # add heatmap
   observeEvent(input$addHeat, {
     data$heat <- 1
     data_heat_time()
@@ -689,7 +701,11 @@ server = function(input, output, session) {
     data.df <- data$heat_data
     hover <- data$heat_hover
     if(!is.null(data.df)){
-      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
+      withProgress(message = 'Calculating...',
+                   value = 0, {
+                     plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
+                     incProgress()
+                   })
       #print(p)
     }else{
       return(NULL)
@@ -710,14 +726,13 @@ server = function(input, output, session) {
       data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
         y <- datasetInput[[x]]
         #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
-        y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj")]
+        y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj"), drop=F]
         colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
         return(y)
       })
       )
       data.df <- data.df[,c(1,mixedorder(colnames(data.df)[-1])+1),drop=F]
       data.df$Link <- createLink(data.df$SYMBOL)
-      #data$virus.df <- data.df
       return(data.df)
     }
   })
@@ -725,12 +740,23 @@ server = function(input, output, session) {
   data_heat_time <- reactive({
     h <- data$heat
     if(is.null(h)){
+      data$heat_data <- NULL
+      data$heat_hover <- NULL
       return(NULL)
     }else{
       data.df <- virus.df()
+      if(is.null(data.df)){
+        data$heat_data <- NULL
+        data$heat_hover <- NULL
+        return(NULL)
+      }
       data.rows <- data.df$SYMBOL
-      data.df <- data.df[,-c(1,ncol(data.df))]
-      data.df <- apply(data.df,2,as.numeric)
+      data.df <- data.df[,-c(1,ncol(data.df)), drop=F]
+      if(nrow(data.df)>1){
+        data.df <- apply(data.df,2,as.numeric)
+      }else{
+        data.df <- as.data.frame(t(apply(data.df,2,as.numeric)))
+      }
       rownames(data.df) <- data.rows
       data.df <- data.df[,c(TRUE, FALSE)]
       colnames(data.df) <- sub(".LFC","",colnames(data.df))
@@ -740,6 +766,7 @@ server = function(input, output, session) {
       for(i in rownames(hover)){
         for(s in colnames(hover)){
           dataset <- datasetInput[[s]]
+          dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
           s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
           count.1 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[1]), colnames(dataset))], collapse = "; ")
           count.2 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[2]), colnames(dataset))], collapse = "; ")
@@ -760,19 +787,18 @@ server = function(input, output, session) {
     }
   })
   
-  # clear data table if plot type changes
-  observeEvent(input$plotType,{
-    data$dt <- NULL
-    data$heat <- NULL
-  })
   
   observeEvent(input$upset_click$elems,{
     data$dt <- 1
+    data$heat <- data$heat + 1
+    data_heat_time()
     #return(unlist(input$upset_click$elems))
   })
   
   observeEvent(input$upsetVenn_click$elems,{
     data$dt <- 1
+    data$heat <- data$heat + 1
+    data_heat_time()
     #return(unlist(input$upsetVenn_click$elems))
   })
   
@@ -796,7 +822,6 @@ server = function(input, output, session) {
     if(is.null(input$select_v) | is.null(input$time)){
       return(NULL)
     }else{
-      print(paste0(input$select_v, ".*_", input$time, collapse = "|"))
       id.list <- lapply(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))], function(x){
         return(x[which(abs(x$log2FoldChange) > input$LFC & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
       })
@@ -806,7 +831,6 @@ server = function(input, output, session) {
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
     }
   })
-  
   
   # display table with elements in clicked plot area of Venn plot
   output$clickedElementsVenn <- renderDataTable({
@@ -858,8 +882,6 @@ server = function(input, output, session) {
   })
   
   output$debug <- renderPrint({
-    print("dev.list():")
-    print(dev.list())
     print("Installed packages:")
     print(installed.packages()[,c(1,3)])
   })
@@ -1050,7 +1072,11 @@ server = function(input, output, session) {
   
   # plot heatmap of genes in selected area
   output$heatmapAll <- renderPlotly({
-    plot_heat_all()
+    withProgress(message = 'Calculating...',
+                 value = 0, {
+                   plot_heat_all()
+                   incProgress()
+                 })
   })
   
   plot_heat_all <- reactive({
