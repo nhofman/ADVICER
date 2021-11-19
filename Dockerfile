@@ -1,4 +1,4 @@
-FROM rocker/shiny:4.0.3
+FROM rocker/shiny:4.1.2
 
 LABEL maintainer=TODO
 LABEL description=TODO
@@ -18,11 +18,16 @@ RUN conda install -c plotly plotly-orca
 
 RUN apt-get install -y libxss1 libasound-dev
 
+#devtools::install_github("rstudio/fontawesome"); \
+#devtools::install_version("htmltools", version="0.5.2"); \
+#install.packages("https://cran.r-project.org/src/contrib/shiny_1.7.1.tar.gz", repos=NULL, type="source"); \
 RUN Rscript -e 'install.packages("shiny"); \
+                install.packages("shinycssloaders"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
                 install.packages("UpSetR"); \
                 install.packages("ggplot2"); \
+                install.packages("svglite"); \
                 install.packages("plotly"); \
                 install.packages("pheatmap"); \
                 install.packages("gtools"); \
@@ -43,6 +48,7 @@ COPY app.R /srv/shiny-server/
 COPY www /srv/shiny-server/www/
 
 RUN chmod 777 /home/shiny/.Renviron
+RUN chmod 777 /srv/shiny-server/
 RUN chmod 777 /srv/shiny-server/.Renviron
 RUN chmod 777 -R /root/miniconda3/bin
 
