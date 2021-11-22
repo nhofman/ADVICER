@@ -712,43 +712,6 @@ server = function(input, output, session) {
   })
   
   output$heatmapTime <- renderPlotly({
-    data.df <- data$heat_data
-    hover <- data$heat_hover
-    if(!is.null(data.df)){
-      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
-      #print(p)
-    }else{
-      return(NULL)
-    }
-  })
-  
-  virus.df <- reactive({
-    virus_id <- NULL
-    if(input$plotType=="UpSet"){
-      virus_id <- unlist(input$upset_click$elems)
-    }
-    if(input$plotType=="Venn"){
-      virus_id <- unlist(input$upsetVenn_click$elems)
-    }
-    if(is.null(input$select_v) | is.null(input$time) | is.null(virus_id)){
-      return(NULL)
-    }else{
-      data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
-        y <- datasetInput[[x]]
-        #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
-        y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj"), drop=F]
-        colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
-        return(y)
-      })
-      )
-      data.df <- data.df[,c(1,mixedorder(colnames(data.df)[-1])+1),drop=F]
-      data.df$Link <- createLink(data.df$SYMBOL)
-      return(data.df)
-    }
-  })
-  
-  #data_heat_time <- reactive({
-   observeEvent(data$heat, {
     if(!data$heat){
       data$heat_data <- NULL
       data$heat_hover <- NULL
@@ -793,7 +756,35 @@ server = function(input, output, session) {
       }
       data$heat_data <- data.df
       data$heat_hover <- hover
+      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
       #return(list(data=data.df, hover=hover.df))
+    }
+    
+    
+  })
+  
+  virus.df <- reactive({
+    virus_id <- NULL
+    if(input$plotType=="UpSet"){
+      virus_id <- unlist(input$upset_click$elems)
+    }
+    if(input$plotType=="Venn"){
+      virus_id <- unlist(input$upsetVenn_click$elems)
+    }
+    if(is.null(input$select_v) | is.null(input$time) | is.null(virus_id)){
+      return(NULL)
+    }else{
+      data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
+        y <- datasetInput[[x]]
+        #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
+        y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj"), drop=F]
+        colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
+        return(y)
+      })
+      )
+      data.df <- data.df[,c(1,mixedorder(colnames(data.df)[-1])+1),drop=F]
+      data.df$Link <- createLink(data.df$SYMBOL)
+      return(data.df)
     }
   })
   
