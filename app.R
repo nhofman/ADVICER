@@ -733,30 +733,27 @@ server = function(input, output, session) {
       rownames(data.df) <- data.rows
       data.df <- data.df[,c(TRUE, FALSE), drop=F]
       colnames(data.df) <- sub(".LFC","",colnames(data.df))
-      hover <- matrix(ncol = ncol(data.df), nrow = nrow(data.df))
-      colnames(hover) <- colnames(data.df)
-      rownames(hover) <- rownames(data.df)
-      for(i in rownames(hover)){
-        for(s in colnames(hover)){
-          dataset <- datasetInput[[s]]
-          dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
-          s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
-          count.1 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[1]), colnames(dataset))], collapse = "; ")
-          count.2 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[2]), colnames(dataset))], collapse = "; ")
-          if(i %in% dataset$SYMBOL){
-            hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
-                                  i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"],
-                                  s.gr[1], count.1, s.gr[2], count.2)
-            #paste(colnames(df), df, sep = ":", collapse = "\n"))
-          }else{
-            hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
-                                  i, s, NA, NA)
-          }
-        }
-      }
+      hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data.df), function(s){
+        s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
+        dataset <- datasetInput[[s]]
+        dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
+        dataset <- dataset[dataset$SYMBOL %in% rownames(data.df), ]
+        dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
+        dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
+        df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
+                                                         dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
+                                                         s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
+        colnames(df.tmp) <- c("SYMBOL", s)
+        return(df.tmp)
+      }, simplify = F)
+      )
+      rownames(hover) <- hover$SYMBOL
+      hover <- subset(hover, select=-c(SYMBOL))
+      hover <- hover[order(rownames(hover)),]
+      data.df <- data.df[order(rownames(data.df)),]
       data$heat_data <- data.df
       data$heat_hover <- hover
-      plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover)
+      plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover)
       #return(list(data=data.df, hover=hover.df))
     }
     
@@ -1072,26 +1069,24 @@ server = function(input, output, session) {
       colnames(data) <- sub(".LFC","",colnames(data))
       data <- apply(data,2,as.numeric)
       rownames(data) <- data.rows
-      hover <- matrix(ncol = ncol(data), nrow = nrow(data))
-      colnames(hover) <- colnames(data)
-      rownames(hover) <- rownames(data)
-      for(i in rownames(hover)){
-        for(s in colnames(hover)){
-          dataset <- datasetInput[[s]]
-          s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
-          count.1 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[1]), colnames(dataset))], collapse = "; ")
-          count.2 <- paste(dataset[dataset$SYMBOL==i, grep(paste0("normalized.*", s.gr[2]), colnames(dataset))], collapse = "; ")
-          if(i %in% dataset$SYMBOL){
-            hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
-                                  i, s, dataset[dataset$SYMBOL==i,"log2FoldChange"], dataset[dataset$SYMBOL==i,"padj"],
-                                  s.gr[1], count.1, s.gr[2], count.2)
-            #paste(colnames(df), df, sep = ":", collapse = "\n"))
-          }else{
-            hover[i,s] <- sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />", 
-                                  i, s, NA, NA)
-          }
-        }
-      }
+      hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data), function(s){
+        s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
+        dataset <- datasetInput[[s]]
+        dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
+        dataset <- dataset[dataset$SYMBOL %in% rownames(data), ]
+        dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
+        dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
+        df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
+                                                         dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
+                                                         s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
+        colnames(df.tmp) <- c("SYMBOL", s)
+        return(df.tmp)
+      }, simplify = F)
+      )
+      rownames(hover) <- hover$SYMBOL
+      hover <- subset(hover, select=-c(SYMBOL))
+      hover <- hover[order(rownames(hover)),]
+      data <- data[order(rownames(data)),]
       plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12)
     }
   })
