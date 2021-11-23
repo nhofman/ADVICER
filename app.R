@@ -753,7 +753,7 @@ server = function(input, output, session) {
       data.df <- data.df[order(rownames(data.df)),]
       data$heat_data <- data.df
       data$heat_hover <- hover
-      plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover)
+      plotHeatmap(data.df, colClust = F, rowClust = F, border_col = NA, fontsize_r = 10, hover = hover)
       #return(list(data=data.df, hover=hover.df))
     }
     
@@ -811,7 +811,9 @@ server = function(input, output, session) {
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
-      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      if(length(id.list)>0){
+        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      }
     }
   })
   
@@ -838,7 +840,9 @@ server = function(input, output, session) {
       id.list <- id.list[sapply(id.list, length) > 0]
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
-      upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      if(length(id.list)>0){
+        upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      }
     }
   })
   
