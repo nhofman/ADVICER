@@ -88,8 +88,6 @@ plotExpression <- function(expr.df, padj.df, gene){
   lfc.gene$padj <- t(padj.df[gene,])
   lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*",NA)))
   lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
-  #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
-  #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
   lfc.min <- min(lfc.gene$symbol)
@@ -187,8 +185,6 @@ ui <- fluidPage(
     ),
     tabPanel("Volcano Plot / MA-Plot",
              sidebarPanel(
-               #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
-               #div(style = "text-align:right", h5(strong("Help"))),
                div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed plot")), choices = c("Volcano plot", "MA-plot"), selected = "Volcano plot"),
@@ -206,7 +202,6 @@ ui <- fluidPage(
                #actionButton("export", "Export plot"),
                conditionalPanel(
                  condition = 'input.plotTypeSingle == "Volcano plot"',
-                 #d.V <- vector(),
                  plotlyOutput("volcanoPlot", height = "500px"),
                  br(),
                  dataTableOutput("clickVP")
@@ -312,7 +307,7 @@ ui <- fluidPage(
                            step = 5),
                #br(),
                br(),
-               h5(strong("Download table")),
+               h5(strong("Download table (includes LFC and padj)")),
                downloadButton("downallXLSX", "Download as xlsx", class = "butt"),
                tags$head(tags$style(".butt{
                                     border: 2px solid black;
@@ -433,7 +428,6 @@ server = function(input, output, session) {
         for (i in input$filesToDown){
           #write each sheet to a csv file, save the name
           fileName <- files.list[grep(sub("vs","Vs",i),files.list)] #paste(i,".csv",sep = "")
-          #write.table(datasetInput[i],fileName,sep = ',', row.names = F, col.names = T)
           files <- c(files,fileName)
         }
       }
@@ -535,12 +529,7 @@ server = function(input, output, session) {
     file.data <- datasetInput[[input$fileToPlot]]
     file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                             ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
-    p <- ggplot(file.data, aes(x = log2FoldChange, y = -log10(padj), color = col, text = SYMBOL)) +
-      geom_point(aes(size = 0.4)) +
-      xlab("log fold change") +
-      ylab("-log10(P-value)") + scale_color_manual(values = c("yellow", "purple", "black")) + theme(legend.position = "bottom", legend.direction = "horizontal")
-    #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
-    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="blue","not significant"="black"), 
+    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="steelblue1","not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                  text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                  source = "V")
@@ -577,7 +566,7 @@ server = function(input, output, session) {
       file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                               ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
-      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
+      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="steelblue1","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                    source = "M")
@@ -754,7 +743,6 @@ server = function(input, output, session) {
       data$heat_data <- data.df
       data$heat_hover <- hover
       plotHeatmap(data.df, colClust = F, rowClust = F, border_col = NA, fontsize_r = 10, hover = hover)
-      #return(list(data=data.df, hover=hover.df))
     }
     
     
@@ -773,7 +761,6 @@ server = function(input, output, session) {
     }else{
       data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
         y <- datasetInput[[x]]
-        #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
         y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj"), drop=F]
         colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
         return(y)
@@ -785,7 +772,6 @@ server = function(input, output, session) {
     }
   })
   
-  
   # display table with elements in clicked plot area of UpSet plot
   output$clickedElements <- renderDataTable({
     #if(input$plotType=="UpSet"){
@@ -796,7 +782,6 @@ server = function(input, output, session) {
       df <- virus.df()
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
       return(df)
-      #data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
     }
   }, escape = F)
   
@@ -812,7 +797,9 @@ server = function(input, output, session) {
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
-        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+          upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% fromList(id.list) %>% generateDistinctIntersections() %>%
+          chartFontSizes(font.family = "sans", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px") %>% 
+          chartLayout(padding = 40, bar.padding = 0.2) %>% interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
   })
@@ -841,7 +828,8 @@ server = function(input, output, session) {
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
-        upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
+        upsetjsVennDiagram() %>% fromList(id.list) %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>%
+          chartFontSizes(font.family = "sans", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px", value.label = "14px") %>% interactiveChart()
       }
     }
   })
@@ -879,9 +867,6 @@ server = function(input, output, session) {
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
     content = function(f){
       ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
-      #png(f, width = 8, height = 10, dpi = 400)
-      #plot(data$plotX)
-      #dev.off()
     }
   )
   
@@ -890,9 +875,6 @@ server = function(input, output, session) {
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
     content = function(f){
       ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
-      #svg(f, width = 8, height = 10, dpi = 400)
-      #plot(data$plotX)
-      #dev.off()
     }
   )
   
@@ -969,12 +951,10 @@ server = function(input, output, session) {
   })
   
   all.df <- reactive({
-    #data$all.df
     gene_id <- unlist(input$upsetAll_click$elems)
     cond <- ifelse(grepl("Virus",input$cond), sub("Virus", "(?!Mock).*",input$cond), input$cond)
     data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste(as.vector(outer(input$select, cond, paste, sep=".*")), collapse = "|"), names(datasetInput), perl = T)]), function(x){
       y <- datasetInput[[x]]
-      #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
       y <- y[y$SYMBOL %in% gene_id, c("SYMBOL","log2FoldChange", "padj")]
       colnames(y) <- c("SYMBOL", paste0(x, ".LFC"), paste0(x,".padj"))
       return(y)
@@ -990,7 +970,6 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".csv"))},
     content = function(f){
-      #write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
       write.csv(all.df(), f, row.names = F)
     },
     contentType = "csv")
@@ -1018,13 +997,14 @@ server = function(input, output, session) {
     }else{
       cond <- ifelse(grepl("Virus",input$cond), sub("Virus", "(?!Mock).*",input$cond), input$cond)
       id.list <- sapply(input$select,function(virus){
-        #print(names(datasetInput[grep(paste(virus, cond, sep = ".*", collapse = "|"), names(datasetInput))]))
         unique(unlist(lapply(datasetInput[grep(paste(virus, cond, sep = ".*", collapse = "|"), names(datasetInput), perl = T)], function(x){
           return(x[which(abs(x$log2FoldChange) > input$LFCall & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
         })))
       }, USE.NAMES = T, simplify = F)
       id.list <- id.list[sapply(id.list, length) > 0]
-      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
+      chartFontSizes(font.family = "sans", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px") %>% 
+      interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
   
