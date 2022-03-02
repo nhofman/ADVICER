@@ -66,6 +66,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     }else{
       p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
     }
+    p <- p %>% config(displayModeBar = TRUE)
     #}
     #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
@@ -165,7 +166,7 @@ ui <- fluidPage(
   
   # Sidebar with a slider input for number of bins 
   navbarPage(
-    "DGE analysis", 
+    "", 
     tabPanel("Download Data",
              #sidebarPanel(
              #    fileInput("file", label = h5(br("File input")), multiple = T),
@@ -529,11 +530,11 @@ server = function(input, output, session) {
     file.data <- datasetInput[[input$fileToPlot]]
     file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                             ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
-    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="steelblue1","not significant"="black"), 
+    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="steelblue3","not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                  text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                  source = "V")
-    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
+    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select") %>% config(displayModeBar = TRUE)
     return(p)
   })
   
@@ -566,11 +567,11 @@ server = function(input, output, session) {
       file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                               ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
-      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="steelblue1","not significant"="black"),
+      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="steelblue3","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                    source = "M")
-      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
+      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select") %>% config(displayModeBar = TRUE)
       return(p)
     }
   })
@@ -671,11 +672,8 @@ server = function(input, output, session) {
   observe({
     input$select_v
     input$plotType
-  #},
-  #{
     data$heat <- FALSE   
     data$dt <- NULL
-    #data_heat_time()
   })
   
   # clear data table and heatmap if plot type changes
@@ -774,7 +772,6 @@ server = function(input, output, session) {
   
   # display table with elements in clicked plot area of UpSet plot
   output$clickedElements <- renderDataTable({
-    #if(input$plotType=="UpSet"){
     dt <- data$dt
     if(is.null(dt)){
       data.frame("SYMBOL"=NULL, "LinkToNCBI"=NULL)
@@ -1162,7 +1159,7 @@ server = function(input, output, session) {
       
       plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z = v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
               text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
-        layout(shapes=lapply(x_break-0.5, vline)) %>% 
+        layout(shapes=lapply(x_break-0.5, vline)) %>% config(displayModeBar = TRUE) %>% 
         add_annotations(
           text = x,
           x = 0.5,
