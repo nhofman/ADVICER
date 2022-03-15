@@ -803,7 +803,7 @@ server = function(input, output, session) {
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
           upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% upsetjs::fromList(id.list) %>% generateDistinctIntersections() %>%
-          chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px") %>% 
+          chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
           chartLayout(padding = 40, bar.padding = 0.2) %>% interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
@@ -834,7 +834,7 @@ server = function(input, output, session) {
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
         upsetjsVennDiagram() %>% upsetjs::fromList(id.list) %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>%
-          chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px", value.label = "14px") %>% interactiveChart()
+          chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px", value.label = "14px") %>% interactiveChart()
       }
     }
   })
@@ -1011,7 +1011,7 @@ server = function(input, output, session) {
       }, USE.NAMES = T, simplify = F)
       id.list <- id.list[sapply(id.list, length) > 0]
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
-      chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px") %>% 
+      chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
       interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
