@@ -96,16 +96,16 @@ plotExpression <- function(expr.df, padj.df, gene){
   p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=symbol, group=group, color=group)) + geom_line() + geom_point() +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
-    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Arial"), legend.text = element_text(size = 15, family = "Arial"), 
-          legend.title = element_text(size = 15, face = "bold", family = "Arial"), axis.text = element_text(size = 15),
-          axis.title = element_text(size = 15, face = "bold", family = "Arial"), plot.title = element_text(size = 20, family = "Arial", face = "bold")) +
+    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
+          legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
+          axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
-    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Arial"), legend.text = element_text(size = 15, family = "Arial"), 
-          legend.title = element_text(size = 15, face = "bold", family = "Arial"), axis.text = element_text(size = 15),
-          axis.title = element_text(size = 15, face = "bold", family = "Arial"), plot.title = element_text(size = 20, family = "Arial", face = "bold")) +
+    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
+          legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
+          axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   #p <- c(p1, p2)
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
@@ -679,6 +679,14 @@ server = function(input, output, session) {
   # clear data table and heatmap if plot type changes
   observeEvent({
     input$upset_click$elems
+  },
+  {
+    data$heat <- FALSE
+    data$dt <- 1
+    #data_heat_time()
+  })
+  
+  observeEvent({
     input$upsetVenn_click$elems
   },
   {
@@ -740,7 +748,7 @@ server = function(input, output, session) {
       data.df <- data.df[order(rownames(data.df)),]
       data$heat_data <- data.df
       data$heat_hover <- hover
-      plotHeatmap(data.df, colClust = F, rowClust = F, border_col = NA, fontsize_r = 10, hover = hover)
+      plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover)
     }
     
     
@@ -795,7 +803,7 @@ server = function(input, output, session) {
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
           upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% upsetjs::fromList(id.list) %>% generateDistinctIntersections() %>%
-          chartFontSizes(font.family = "Arial", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px") %>% 
+          chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px") %>% 
           chartLayout(padding = 40, bar.padding = 0.2) %>% interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
@@ -826,7 +834,7 @@ server = function(input, output, session) {
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
         upsetjsVennDiagram() %>% upsetjs::fromList(id.list) %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>%
-          chartFontSizes(font.family = "Arial", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px", value.label = "14px") %>% interactiveChart()
+          chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px", value.label = "14px") %>% interactiveChart()
       }
     }
   })
@@ -871,7 +879,7 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
     content = function(f){
-      svg(f, width = 8, height = 10, family = "Arial")
+      svg(f, width = 8, height = 10, family = "Helvetica")
       plot(data$plotX)
       dev.off()
       #ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
@@ -1003,7 +1011,7 @@ server = function(input, output, session) {
       }, USE.NAMES = T, simplify = F)
       id.list <- id.list[sapply(id.list, length) > 0]
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
-      chartFontSizes(font.family = "Arial", chart.label = "20px", set.label = "18px", bar.label = "18px", axis.tick = "16px", export.label = "13px") %>% 
+      chartFontSizes(font.family = "Helvetica", chart.label = "18px", set.label = "16px", bar.label = "16px", axis.tick = "16px", export.label = "13px") %>% 
       interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
