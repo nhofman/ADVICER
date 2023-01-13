@@ -84,24 +84,26 @@ createLink <- function(val) {
 
 plotExpression <- function(expr.df, padj.df, gene){
   lfc.gene <- data.frame(t(expr.df[gene,]))
-  colnames(lfc.gene) <- c("symbol")
-  lfc.gene$padj <- t(padj.df[gene,])
-  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*",NA)))
+  lfc.gene <- merge(lfc.gene,t(padj.df[gene,]), by = "row.names")
+  rownames(lfc.gene) <- lfc.gene[,1]
+  lfc.gene <- lfc.gene[,-1]
+  colnames(lfc.gene) <- c("lfc", "padj")
+  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*","")))
   lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
   #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
-  lfc.min <- min(lfc.gene$symbol)
-  lfc.max <- max(lfc.gene$symbol) + 0.25
-  p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=symbol, group=group, color=group)) + geom_line() + geom_point() +
+  lfc.min <- ifelse(min(lfc.gene$lfc)>0, 0, min(lfc.gene$lfc))
+  lfc.max <- max(lfc.gene$lfc) + 0.25
+  p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + geom_line() + geom_point() +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
           legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
           axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
-  p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=symbol, group=group, fill=group)) + geom_col(position = "dodge") +
+  p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=lfc, group=group, fill=group)) + geom_col(position = "dodge") +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
@@ -112,7 +114,7 @@ plotExpression <- function(expr.df, padj.df, gene){
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
   #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
-  dev.off()
+  #dev.off()
   return(p)
 }
 
@@ -273,7 +275,7 @@ ui <- fluidPage(
                checkboxGroupInput("selectVirus", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                                   selected = NULL),
-               textInput("gene", label = h5(strong("Gene symbol")), value = NULL, placeholder = "e.g. TNF or cxcl2"),
+               textInput("gene", label = h5(strong("Gene symbol")), value = "", placeholder = "e.g. TNF or cxcl2"),
                h5(strong("Download plot")),
                downloadButton("downGeneXpng","Download as png"),
                downloadButton("downGeneXsvg","Download as svg")
@@ -335,19 +337,19 @@ ui <- fluidPage(
                #downloadButton("downHeatAll", "Download heatmap"),
                plotlyOutput("heatmapAll", height = 1500) %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 2)
              )),
-    tabPanel("SNP Analysis",
-             sidebarPanel(
-               div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
-               selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-                           selected = NULL)
-             ),
-             mainPanel(
-               #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
-               #DT::dataTableOutput("SNPdata")
-               plotlyOutput("heatSNP", height = "1000px")
-               #verbatimTextOutput("SNPdata")
-             ))
+    #tabPanel("SNP Analysis",
+    #         sidebarPanel(
+    #           div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
+    #           selectInput("virusSNP", label = h5(strong("Select virus")), 
+    #                       choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+    #                       selected = NULL)
+    #         ),
+    #         mainPanel(
+    #           #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
+    #           #DT::dataTableOutput("SNPdata")
+    #           plotlyOutput("heatSNP", height = "1000px")
+    #           #verbatimTextOutput("SNPdata")
+    #         ))
   )
 )
 
@@ -371,7 +373,6 @@ server = function(input, output, session) {
     })
     #Sys.sleep(5)
     names(datasetInput) <- sub("deseq2_results_(.*).csv","\\1",basename(files.list))
-    names(datasetInput) <- sub("Vs","vs", names(datasetInput))
     datasetInput <- datasetInput[mixedorder(sub("vs_Mock_","",names(datasetInput)))]
     vcf.list <- lapply(vcf.files, read.vcfR)
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
@@ -420,7 +421,7 @@ server = function(input, output, session) {
   output$download <- renderUI({
     checkboxGroupInput("filesToDown", "Choose files to download", as.list(c("all",names(datasetInput))))
   })
-  
+ 
   output$filesDown <- downloadHandler(
     filename = function(){
       "data.zip"
@@ -432,7 +433,7 @@ server = function(input, output, session) {
       }else{
         for (i in input$filesToDown){
           #write each sheet to a csv file, save the name
-          fileName <- files.list[grep(sub("vs","Vs",i),files.list)] #paste(i,".csv",sep = "")
+          fileName <- files.list[grep(i,files.list)] #paste(i,".csv",sep = "")
           #write.table(datasetInput[i],fileName,sep = ',', row.names = F, col.names = T)
           files <- c(files,fileName)
         }
@@ -544,7 +545,7 @@ server = function(input, output, session) {
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                  text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                  source = "V")
-    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
+    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), xaxis = list(exponentformat = "none"), dragmode = "select")
     return(p)
   })
   
@@ -581,7 +582,7 @@ server = function(input, output, session) {
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
                    source = "M")
-      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), dragmode = "select")
+      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), yaxis = list(exponentformat = "none"), dragmode = "select")
       return(p)
     }
   })
@@ -878,7 +879,7 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
     content = function(f){
-      ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
+      ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
       #png(f, width = 8, height = 10, dpi = 400)
       #plot(data$plotX)
       #dev.off()
@@ -889,7 +890,7 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
     content = function(f){
-      ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
+      ggsave(f, plot_geneX(), "svg", width = 8, height = 10, dpi = 400)
       #svg(f, width = 8, height = 10, dpi = 400)
       #plot(data$plotX)
       #dev.off()
@@ -898,20 +899,32 @@ server = function(input, output, session) {
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
-    p <- data$plotX
+    p <- plot_geneX()
+    #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+    #print(data_padj())
     if(is.null(p)){
       return(NULL)
     }else{
+      #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
       plot(p)
     }
   })
   
   plot_geneX <- reactive({
-    list(input$selectVirus, input$gene)
+  #  list(input$selectVirus, input$gene)
+    if(is.null(data_lfc()) || input$gene==""){
+      return(NULL)
+    }else{
+      if(!toupper(input$gene) %in% rownames(data_lfc())){
+        return(NULL)
+      }else{
+        plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+      }
+    }
   })
-  
-  observeEvent(plot_geneX(), {
-    if(is.null(input$selectVirus) | is.null(input$gene)){
+
+  data_lfc <- reactive({
+    if(is.null(input$selectVirus)){
       return(NULL)
     }else{
       lfc.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
@@ -920,15 +933,31 @@ server = function(input, output, session) {
         return(x.df)}))
       rownames(lfc.df) <- lfc.df$SYMBOL
       lfc.df <- lfc.df[,-1]
+      return(lfc.df)
+    }
+  })
+  
+  data_padj <- reactive({
+    if(is.null(input$selectVirus)){
+      return(NULL)
+    }else{
       padj.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T),lapply(names(datasetInput[grep(paste(input$selectVirus, collapse = "|"), names(datasetInput))]), function(x){
         x.df <- data.frame(datasetInput[[x]]$SYMBOL,datasetInput[[x]]$padj)
         colnames(x.df) <- c("SYMBOL",x)
         return(x.df)}))
       rownames(padj.df) <- padj.df$SYMBOL
       padj.df <- padj.df[,-1]
-      data$plotX <- plotExpression(expr.df = lfc.df, padj.df = padj.df, gene = toupper(input$gene))
+      return(padj.df)
     }
   })
+  
+  #observeEvent(plot_geneX(), {
+  #  if(is.null(input$selectVirus) | is.null(input$gene)){
+  #    return(NULL)
+  #  }else{
+  #    data$plotX <- plotExpression(expr.df = lfc.df, padj.df = padj.df, gene = toupper(input$gene))
+  #  }
+  #})
   
   ## Virus comparison
   
