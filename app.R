@@ -86,20 +86,14 @@ plotExpression <- function(expr.df, padj.df, gene){
   lfc.gene <- merge(lfc.gene,t(padj.df[gene,]), by = "row.names")
   rownames(lfc.gene) <- lfc.gene[,1]
   lfc.gene <- lfc.gene[,-1]
-  print(colnames(lfc.gene))
-  print(lfc.gene)
   colnames(lfc.gene) <- c("lfc", "padj")
-  print(lfc.gene)
-  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*",NA)))
-  print(lfc.gene)
+  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*","")))
   lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
-  print(lfc.gene)
   #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
-  print(lfc.gene)
-  lfc.min <- min(lfc.gene$lfc)
+  lfc.min <- ifelse(min(lfc.gene$lfc)>0, 0, min(lfc.gene$lfc))
   lfc.max <- max(lfc.gene$lfc) + 0.25
   p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + geom_line() + geom_point() +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
@@ -119,7 +113,7 @@ plotExpression <- function(expr.df, padj.df, gene){
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
   #margin = theme(plot.margin = unit(c(2,2,2,2), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
-  dev.off()
+  #dev.off()
   return(p)
 }
 
@@ -378,7 +372,7 @@ vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 server = function(input, output, session) {
   
   # Define reactive values
-  data <- reactiveValues(d=NULL, df=NULL, dM=NULL, dfM=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, virus.df=NULL, plotX=NULL)
+  data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, virus.df=NULL, plotX=NULL)
   
   # Read data
   withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
@@ -499,45 +493,28 @@ server = function(input, output, session) {
     contentType = "csv")
   
   # set plotly_click to NULL on input change
-  observeEvent(input$fileToPlot,{
-    data$d <- NULL
-    data$dV <- NULL
-    data$dM <- NULL
-    data$dfM <- NULL
+  observeEvent(input$fileToPlot, {
+    data$select_points <- NULL
   })
   
-  # save clicked elements to vector
-  observeEvent(event_data("plotly_selected", source = "V"), {
-    req(datasetInput)
-    req(input$fileToPlot)
-    data$d <- event_data("plotly_selected", source = "V")
-    a <- data$dV
-    #a <- c(a, data$d$customdata)
-    data$dV <- a
+  observeEvent(input$plotTypeSingle, {
+    data$select_points <- NULL
   })
   
-  observeEvent(event_data("plotly_selected", source = "M"), {
-    req(datasetInput)
-    req(input$fileToPlot)
-    data$dM <- event_data("plotly_selected", source = "M")
-    #a <- data$dfM
-    #a <- c(a, data$dM$customdata)
-    #data$dfM <- a
+  observeEvent(event_data("plotly_selected"), {
+    data$select_points <- 1
   })
   
   # display table of clicked elements and associated LFC and padj in Volcano plot
   output$clickVP <- renderDataTable({
-    d <- data$d
-    d.V <- data$dV
-    if(is.null(d)){
-      return(NULL)
-    }else{
-      df <- datasetInput[[input$fileToPlot]]
-      df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
-      df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
-      df$NCBI <- createLink(df$SYMBOL)
-      return(df)
-    }
+    req(!is.null(data$select_points))
+    selected <- event_data("plotly_selected") #selected_Volcano()
+    req(!is.null(selected))
+    df <- datasetInput[[input$fileToPlot]]
+    df <- df[df$SYMBOL %in% selected$customdata,c("SYMBOL","log2FoldChange","padj")]
+    df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
+    df$NCBI <- createLink(df$SYMBOL)
+    return(df)
   }, escape = F)
   
   # plot Volcano plot of selected sample
@@ -559,25 +536,23 @@ server = function(input, output, session) {
     #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
     p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="blue","not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
-                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
-                 source = "V")
-    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), xaxis = list(exponentformat = "none"), dragmode = "select")
+                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#,
+    #source = "V")
+    p <- p %>% layout(legend = list(orientation = "h", y = -0.2), xaxis = list(exponentformat = "none"), dragmode = "select") %>% config(displayModeBar = TRUE)  
+    #p <- p %>% event_register("plotly_selected")
     return(p)
   })
   
   # display table of clicked elements and associated LFC and padj in MA-plot
   output$clickMA <- renderDataTable({
-    d <- data$dM
-    d.MA <- data$dfM
-    if(is.null(d)){
-      return(NULL)
-    }else{
-      df <- datasetInput[[input$fileToPlot]]
-      df <- df[df$SYMBOL %in% d$customdata,c("SYMBOL","log2FoldChange","padj")]
-      df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
-      df$NCBI <- createLink(df$SYMBOL)
-      return(df)
-    }
+    req(!is.null(data$select_points))
+    selected <- event_data("plotly_selected") 
+    req(!is.null(selected))
+    df <- datasetInput[[input$fileToPlot]]
+    df <- df[df$SYMBOL %in% selected$customdata,c("SYMBOL","log2FoldChange","padj")]
+    df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
+    df$NCBI <- createLink(df$SYMBOL)
+    return(df)
   }, escape = F)
   
   # plot MA-plot of selected sample
@@ -596,9 +571,9 @@ server = function(input, output, session) {
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
       p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
-                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)),
-                   source = "M")
-      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), yaxis = list(exponentformat = "none"), dragmode = "select")
+                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#,
+      #source = "M")
+      p <- p %>% layout(legend = list(orientation = "h", y = -0.2), yaxis = list(exponentformat = "none"), dragmode = "select") %>% config(displayModeBar = TRUE)
       return(p)
     }
   })
@@ -833,7 +808,9 @@ server = function(input, output, session) {
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
-        upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections() %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+        upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% upsetjs::fromList(id.list) %>% generateDistinctIntersections() %>%
+          chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
+          chartLayout(padding = 40, bar.padding = 0.2) %>% interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
   })
@@ -903,6 +880,7 @@ server = function(input, output, session) {
       #png(f, width = 8, height = 10, dpi = 400)
       #plot(data$plotX)
       #dev.off()
+      #ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
     }
   )
   
@@ -914,6 +892,7 @@ server = function(input, output, session) {
       #svg(f, width = 8, height = 10, dpi = 400)
       #plot(data$plotX)
       #dev.off()
+      #ggsave(f, plot_geneX(), "svg", width = 8, height = 10, dpi = 400)
     }
   )
   
@@ -934,6 +913,31 @@ server = function(input, output, session) {
   #plot_geneX <- reactive({
   #  list(input$selectVirus, input$gene)
   #})
+
+  #   p <- plot_geneX()
+  #   #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+  #   #print(data_padj())
+  #   if(is.null(p)){
+  #     return(NULL)
+  #   }else{
+  #     #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+  #     plot(p)
+  #   }
+  # })
+  # 
+  # plot_geneX <- reactive({
+  #   #  list(input$selectVirus, input$gene)
+  #   if(is.null(data_lfc()) || input$gene==""){
+  #     return(NULL)
+  #   }else{
+  #     if(!toupper(input$gene) %in% rownames(data_lfc())){
+  #       return(NULL)
+  #     }else{
+  #       plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+  #     }
+  #   }
+  # })
+  
 
   data_lfc <- reactive({
     if(is.null(input$selectVirus)){
@@ -1066,6 +1070,9 @@ server = function(input, output, session) {
       }, USE.NAMES = T, simplify = F)
       id.list <- id.list[sapply(id.list, length) > 0]
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
+      #upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
+      #  chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
+      #  interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
   

@@ -1,0 +1,7 @@
+objects:
+  - bucket: VirusAppNina
+    key: data/csv_v2.0.0.tar.gz
+    filename: csv.tar.gz
+  - bucket: VirusAppNina
+    key: data/vcf_v2.0.0.tar.gz
+    filename: vcf.tar.gz
