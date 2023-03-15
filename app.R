@@ -55,9 +55,11 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     color_up <- colorRampPalette(c("white", "red"))(length(seq(0, quantile(xx.unlist, na.rm = TRUE, probs = legend.limit), break_step)))
     color <- c(color,color_up)
   }
+  #print(xx)
   #if((nrow(xx)>1 | ncol(xx)>1)){
   if(complexHT){
-      p <- Heatmap(as.matrix(xx), cluster_columns =colClust, cluster_rows = rowClust, col = color, show_row_dend = F)
+      p <- Heatmap(as.matrix(xx), cluster_columns =colClust, cluster_rows = rowClust, col = color, show_row_dend = F, 
+                   heatmap_legend_param = list(title = NA))
   }
   if(heatmaply){
     if(!is.na(file)){
@@ -754,7 +756,7 @@ server = function(input, output, session) {
     output$heatmapTimePlotly <- renderPlotly(plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover, heatmaply = T))
   }) %>% bindEvent(input$addHeat1, ignoreInit = T)
   
-  output$heatmapTime <- renderPlotly({})
+  #output$heatmapTime <- renderPlotly({})
   
   virus.df <- reactive({
     virus_id <- NULL
@@ -780,7 +782,6 @@ server = function(input, output, session) {
       return(data.df)
     }
   })
-  
   
   # display table with elements in clicked plot area of UpSet plot
   output$clickedElements <- renderDataTable({
@@ -1116,10 +1117,14 @@ server = function(input, output, session) {
     }else{
       data <- all.df()
       data.rows <- data$SYMBOL
-      data <- data[,-c(1,ncol(data))]
-      data <- data[,c(TRUE, FALSE)]
+      data <- data[,-c(1,ncol(data)), drop = F]
+      data <- data[,c(TRUE, FALSE), drop = F]
       colnames(data) <- sub(".LFC","",colnames(data))
-      data <- apply(data,2,as.numeric)
+      if(nrow(data)>1){
+        data <- apply(data,2,as.numeric)
+      }else{
+        data <- as.data.frame(t(apply(data,2,as.numeric)))
+      }
       rownames(data) <- data.rows
       hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data), function(s){
         s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
@@ -1139,7 +1144,7 @@ server = function(input, output, session) {
       hover <- subset(hover, select=-c(SYMBOL))
       hover <- hover[order(rownames(hover)),]
       data <- data[order(rownames(data)),]
-      plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12)
+      plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12, heatmaply = T, complexHT = F)
     }
   })
   
