@@ -25,8 +25,8 @@ library(tidytext)
 library(dplyr)
 library(heatmaply)
 library(shinycssloaders)
-library(InteractiveComplexHeatmap)
 library(ComplexHeatmap)
+library(InteractiveComplexHeatmap)
 
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1, setWidth = F,
                         rowClust = T, colClust = T, fontsize_r = 0.8, fontsize_c = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,
@@ -75,6 +75,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
     #         fontsize_row = fontsize_row, fontsize_col = fontsize_col, cutree_rows = clrn, 
     #         border_color = border_col, display_numbers = display_numbers)
   }
+  print(class(p))
   return(p)
 }
 
@@ -100,16 +101,16 @@ plotExpression <- function(expr.df, padj.df, gene){
   p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + geom_line() + geom_point() +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
-    theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
-          legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
-          axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
+    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
+          legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
+          axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=lfc, group=group, fill=group)) + geom_col(position = "dodge") +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
     geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
-    theme(plot.caption = element_text(hjust = 0, size = 15, family = "sans"), legend.text = element_text(size = 15, family = "sans"), 
-          legend.title = element_text(size = 15, face = "bold", family = "sans"), axis.text = element_text(size = 15),
-          axis.title = element_text(size = 15, face = "bold", family = "sans"), plot.title = element_text(size = 20, family = "sans", face = "bold")) +
+    theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
+          legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
+          axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   #p <- c(p1, p2)
   #gridExtra::grid.arrange(p1, p2, ncol = 1)
@@ -129,7 +130,7 @@ Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Pla
 #setwd("/tmp/")
 
 datasetInput <- NULL
-# Define UI for application that draws a histogram
+# Define UI for application
 ui <- fluidPage(
   tags$head(
     tags$style(
@@ -168,9 +169,8 @@ ui <- fluidPage(
   # Application title
   titlePanel("Differential Gene Expression Analysis"),
   
-  # Sidebar with a slider input for number of bins 
   navbarPage(
-    "DGE analysis", 
+    "", 
     tabPanel("Download Data",
              #sidebarPanel(
              #    fileInput("file", label = h5(br("File input")), multiple = T),
@@ -318,7 +318,7 @@ ui <- fluidPage(
                            step = 5),
                #br(),
                br(),
-               h5(strong("Download table")),
+               h5(strong("Download table (includes LFC and padj)")),
                downloadButton("downallXLSX", "Download as xlsx", class = "butt"),
                tags$head(tags$style(".butt{
                                     border: 2px solid black;
@@ -517,7 +517,7 @@ server = function(input, output, session) {
     df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
     df$NCBI <- createLink(df$SYMBOL)
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot Volcano plot of selected sample
   output$volcanoPlot <- renderPlotly({
@@ -531,12 +531,7 @@ server = function(input, output, session) {
     file.data <- datasetInput[[input$fileToPlot]]
     file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                             ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
-    p <- ggplot(file.data, aes(x = log2FoldChange, y = -log10(padj), color = col, text = SYMBOL)) +
-      geom_point(aes(size = 0.4)) +
-      xlab("log fold change") +
-      ylab("-log10(P-value)") + scale_color_manual(values = c("yellow", "purple", "black")) + theme(legend.position = "bottom", legend.direction = "horizontal")
-    #p %>% ggplotly(tooltip = c("SYMBOL", "log2FoldChange", "padj")) %>% layout(legend = list(orientation = "h"))#, x = 0.4, y = -0.2))
-    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="blue","not significant"="black"), 
+    p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red","down"="steelblue3","not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                  text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#,
     #source = "V")
@@ -555,7 +550,7 @@ server = function(input, output, session) {
     df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
     df$NCBI <- createLink(df$SYMBOL)
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot MA-plot of selected sample
   output$MAPlot <- renderPlotly({
@@ -571,7 +566,7 @@ server = function(input, output, session) {
       file.data$col <- ifelse(file.data$log2FoldChange > input$LFCsingle & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "up", 
                               ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[,grep("normalized", colnames(file.data))],1,max) >= 10, "down", "not significant"))
       file.data$baseMeanSample <- rowMeans(file.data[,grep("normalized", colnames(file.data))])
-      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="blue","not significant"="black"),
+      p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red","down"="steelblue3","not significant"="black"),
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL,
                    text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#,
       #source = "M")
@@ -730,6 +725,8 @@ server = function(input, output, session) {
   observe({
     df <- data_heatmap()
     ht <- plotHeatmap(df, colClust = F, rowClust = T, complexHT = T)
+    print(class(ht))
+    #ht <- draw(ht)
     InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", compact = F, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
     }) %>% bindEvent(input$addHeat2, ignoreInit = T)
   
@@ -795,7 +792,7 @@ server = function(input, output, session) {
       return(df)
       #data.frame("Symbol"=unlist(input$upset_click$elems), "LinkToNCBI" = createLink(unlist(input$upset_click$elems)))
     }
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot UpSet plot of selected virus und times
   output$upset <- renderUpsetjs({
@@ -826,7 +823,7 @@ server = function(input, output, session) {
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
       return(df)
     }
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot Venn diagram of selected virus und times
   output$upsetVenn <- renderUpsetjs({
@@ -840,7 +837,9 @@ server = function(input, output, session) {
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
-        upsetjsVennDiagram() %>% fromList(id.list) %>% chartFontSizes(font.family = "sans", set.label = "14px", value.label = "14px", axis.tick = "12px") %>% interactiveChart()
+        upsetjsVennDiagram() %>% fromList(id.list) %>% 
+        chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
+          interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
   })
@@ -906,7 +905,8 @@ server = function(input, output, session) {
       return(NULL)
     }else{
       print("renderPlot")
-      #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+      p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+      print(class(p))
       plot(plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene)))
     }
   })
@@ -1055,7 +1055,7 @@ server = function(input, output, session) {
       colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
     }
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot UpSet plot with selected viruses and conditions
   output$upsetAll <- renderUpsetjs({
@@ -1070,10 +1070,9 @@ server = function(input, output, session) {
         })))
       }, USE.NAMES = T, simplify = F)
       id.list <- id.list[sapply(id.list, length) > 0]
-      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>% chartFontSizes(font.family = "sans", set.label = "14px", bar.label = "14px", axis.tick = "12px") %>% interactiveChart()
-      #upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
-      #  chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
-      #  interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
+      upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
+        chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
+        interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
   
@@ -1235,7 +1234,7 @@ server = function(input, output, session) {
       
       plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z = v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
               text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
-        layout(shapes=lapply(x_break-0.5, vline)) %>% 
+        layout(shapes=lapply(x_break-0.5, vline)) %>% config(displayModeBar = TRUE) %>%
         add_annotations(
           text = x,
           x = 0.5,
