@@ -1050,7 +1050,7 @@ server = function(input, output, session) {
   
   # display table of genes in selected area
   output$clickedElementsAll <- renderDataTable({
-    df <- data.frame("Symbol"=unlist(input$upsetAll_click$elems), "Link" = createLink(unlist(input$upsetAll_click$elems)))
+    df <- data.frame("Symbol"=unlist(input$upsetAll_click$elems), "LinkToNCBI" = createLink(unlist(input$upsetAll_click$elems)))
     if(length(unlist(input$upsetAll_click$name)) > 0){
       colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
     }
