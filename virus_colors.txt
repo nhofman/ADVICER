@@ -1,0 +1,10 @@
+EBOV	green3
+H1N1	darkorange1
+H5N1	goldenrod2
+LASV	yellow4
+MARV	blue3
+Mock	gray60
+NiV	cyan3
+RSV	mediumorchid4
+RVFV	hotpink3
+SFSV	brown3
