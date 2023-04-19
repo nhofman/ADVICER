@@ -22,6 +22,7 @@ RUN apt-get install -y libxss1 libasound-dev
 #devtools::install_version("htmltools", version="0.5.2"); \
 #install.packages("https://cran.r-project.org/src/contrib/shiny_1.7.1.tar.gz", repos=NULL, type="source"); \
 RUN Rscript -e 'install.packages("shiny"); \
+                install.packages("shinyBS"); \
                 install.packages("shinycssloaders"); \
                 install.packages("DT"); \
                 install.packages("VennDiagram"); \
@@ -36,14 +37,15 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("tidytext"); \
                 install.packages("dplyr"); \
                 install.packages("heatmaply"); \
-                install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
+                #install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
+                install.packages("upsetjs"); \
                 install.packages("BiocManager"); \
-                BiocManager::install(c("ComplexHeatmap", "InteractiveComplexHeatmap")); \
+                BiocManager::install(c("InteractiveComplexHeatmap")); \
                 '
 
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
-# Add the virus app
+# Add the virus app und other files
 COPY virus_colors.txt /srv/shiny-server/
 COPY env/.Renviron /home/shiny/
 COPY env/.Renviron /srv/shiny-server/
