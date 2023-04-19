@@ -266,8 +266,7 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               actionButton("addHeat1", "Show heatmap with plotly (only suitable for # genes < 1000)"),
-               actionButton("addHeat2", "Show heatmap with complexHeatmap"),
+               actionButton("addHeat2", "Show heatmap"),
                #downloadButton("downHeatTime", "Download heatmap"),
                br(),
                br(),
@@ -306,8 +305,7 @@ ui <- fluidPage(
                ),
                #conditionalPanel("output.show", plotlyOutput("heatmapTime", height = "750px")),
                #InteractiveComplexHeatmapOutput("heatmapTime")
-               htmlOutput("heatmapTimeComplex"),
-               plotlyOutput("heatmapTimePlotly", height = "750px") %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 1.5)
+               htmlOutput("heatmapTimeComplex")
              )
     ),
     tabPanel("Gene Expression",
@@ -701,7 +699,6 @@ server = function(input, output, session) {
     input$select_v
     input$plotType
     input$time
-    data$heatPlty <- FALSE
     data$heatCplx <- FALSE
     data$dt <- NULL
     #data_heat_time()
@@ -711,9 +708,11 @@ server = function(input, output, session) {
    observe({
       input$upsetVenn_click$elems
       input$upset_click$elems
-     data$heatPlty <- FALSE
      data$heatCplx <- FALSE
      data$dt <- 1
+     print(upset_selection$upset_selected)
+     upset_selection$upset_selected <- input$upset_click
+     print(upset_selection$upset_selected)
    }) #%>% bindEvent(input$upset_click$elems)
   
   # create dataframe for heatmap
@@ -741,13 +740,6 @@ server = function(input, output, session) {
     if(input$addHeat2){
       data$heatCplx <- T
     }
-  })
-  
-  observe({
-    if(input$addHeat1){
-      data$heatPlty <- T
-    }
-    #print(input$addHeat1)
   })
   
   # if heatCplx TRUE: plot heatmap with InteractiveCompelxHeatmap
@@ -854,10 +846,22 @@ server = function(input, output, session) {
       if(length(id.list)>0){
         upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% upsetjs::fromList(id.list) %>% generateDistinctIntersections() %>%
           chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
-          chartLayout(padding = 40, bar.padding = 0.2) %>% interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
+          chartLayout(padding = 40, bar.padding = 0.2) %>% chartTheme(selection.color = "red", has.selection.color = "black") %>% 
+          chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>% interactiveChart()
       }
     }
   })
+  
+  upset_selection <- reactiveValues(upset_selected = '')
+  
+  observeEvent(upset_selection$upset_selected, {
+    print(upset_selection$upset_selected)
+    upsetjsProxy('upset', session) %>%
+      setSelection(upset_selection$upset_selected)
+  })
+  
+  
+  #upsetjsProxy("upsetTime") %>% setSelection(input$upset_click$elems)
   
   # display table with elements in clicked plot area of Venn plot
   output$headerVenn <- renderText({ paste("Gene list of the intersection:", input$upsetVenn_click$name) })
