@@ -790,8 +790,8 @@ server = function(input, output, session) {
         )
         rownames(hover) <- hover$SYMBOL
         hover <- hover[,-1] #subset(hover, select=-c(SYMBOL))
-        hover <- hover[order(rownames(hover)),]
-        data.df <- data.df[order(rownames(data.df)),]
+        data.df <- data.df[order(rowMeans(data.df)),]
+        hover <- hover[rownames(data.df),]
         p <- plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover, heatmaply = T)
         p <- p %>% config(toImageButtonOptions=list(format="svg", width=800, height=600, scale=2))
         return(p)
