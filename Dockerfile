@@ -1,4 +1,4 @@
-FROM rocker/shiny:4.1.2
+FROM rocker/shiny:4.2.3
 
 LABEL maintainer=TODO
 LABEL description=TODO
@@ -44,6 +44,7 @@ RUN Rscript -e 'install.packages("shiny"); \
 # Delete default sample app
 RUN rm -rf /srv/shiny-server/*
 # Add the virus app
+COPY virus_colors.txt /srv/shiny-server/
 COPY env/.Renviron /home/shiny/
 COPY env/.Renviron /srv/shiny-server/
 COPY app.R /srv/shiny-server/
