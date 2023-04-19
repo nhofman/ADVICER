@@ -1,15 +1,15 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
+# 
+# Shiny application for the comparative visualization of virus-induced differential gene expression
 #
-# Find out more about building applications with Shiny here:
+# 
 #
-#    http://shiny.rstudio.com/
+#   
 #
 #
 
 library(shiny)
-#library(shinyBS)
+library(shinyBS)
 #library(shinyWidgets)
 library(DT)
 library(VennDiagram)
@@ -25,10 +25,14 @@ library(tidytext)
 library(dplyr)
 library(heatmaply)
 library(shinycssloaders)
+library(ComplexHeatmap)
+library(InteractiveComplexHeatmap)
 
+# Create heatmap with plotly or ComplexHeatmap
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1, setWidth = F,
                         rowClust = T, colClust = T, fontsize_r = 0.8, fontsize_c = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,
-                        legend.limit = 1, filter_col = NA, annotation_colors = NA, break_step = 0.1, display_numbers = F, hover = NULL, file = NA){
+                        legend.cut = 1, filter_col = NA, annotation_colors = NA, break_step = 0.1, display_numbers = F, hover = NULL, file = NA,
+                        heatmaply = F, complexHT = T, legend.limit.up = NA, legend.limit.down = NA){
   if(is.na(row_subset[1])){
     xx <- x
   }else{
@@ -37,36 +41,60 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   #xx[xx==0] <- 0.000001
   #xx <- na.omit(xx)
   if (nrow(xx)<2) {
-    rowClust = F
+    rowClust <- F
   }
   if(!is.na(filter_col)){
     xx <- xx[,which(colMaxs(as.matrix(abs(xx)))>filter_col)]
   }
   xx.unlist <- as.numeric(unlist(xx))
+  
+  # Calculate legend limits, if not defined
+  if(is.na(legend.limit.up)){
+    legend.limit.up <- quantile(unlist(xx), na.rm = TRUE, probs = legend.cut)
+    print(legend.limit.up)
+  }
+  if(is.na(legend.limit.down)){
+    legend.limit.down <- quantile(unlist(xx), na.rm = TRUE, probs = (1-legend.cut))  
+    print(legend.limit.down)
+  }
+  
   color <- vector()
+  legend.limit <- max(legend.limit.up, abs(legend.limit.down))
+  print(legend.limit)
+  legend.limit.round <- round(legend.limit)
   if(-1 %in% sign(xx.unlist)){
-    color_down <- colorRampPalette(c("blue", "white"))(length(seq(quantile(xx.unlist, na.rm = TRUE, probs = (1-legend.limit)), 0, break_step))) #blue(n=length(breakSeq)-1) #, low="blue", mid = "white", high="red")
+    color_down <- colorRampPalette(c("blue", "white"))(length(seq(-legend.limit, 0, break_step))) #blue(n=length(breakSeq)-1) #, low="blue", mid = "white", high="red")
     color <- c(color,color_down)
   }
   if(1 %in% sign(xx.unlist)){
-    color_up <- colorRampPalette(c("white", "red"))(length(seq(0, quantile(xx.unlist, na.rm = TRUE, probs = legend.limit), break_step)))
+    color_up <- colorRampPalette(c("white", "red"))(length(seq(0, legend.limit, break_step)))
     color <- c(color,color_up)
   }
+  col_fun <- circlize::colorRamp2(c(-legend.limit, 0, legend.limit), c("blue", "white", "red"), space = "LAB")
+  print( ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
+                                       limits = c(-legend.limit, legend.limit)))
+  #print(xx)
   #if((nrow(xx)>1 | ncol(xx)>1)){
-  if(setWidth){
-    #p <- p %>% layout(width=ncol(xx)*50, height = nrow(xx)*10)
+  if(complexHT){
+    #pushViewport(viewport(gp = gpar(fontfamily = "Helvetica")))
+    p <- Heatmap(as.matrix(xx), cluster_columns = colClust, cluster_rows = rowClust, col = col_fun, show_row_dend = F, 
+                 heatmap_legend_param = list(title = "", at = c(-legend.limit.round, -legend.limit.round/2, 0, legend.limit.round/2, legend.limit.round)),
+                 row_names_gp = gpar(fontfamily = "Helvetica"), column_names_gp = gpar(fontfamily = "Helvetica"))
+    #popViewport()
+  }
+  if(heatmaply){
     if(!is.na(file)){
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, 
+                     scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
+                                                                             limits = c(-legend.limit, legend.limit)), 
+                     fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
     }else{
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, width = ncol(xx)*70, height = nrow(xx)*30, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
+      p <- heatmaply(xx, Colv = F, Rowv = rowClust, custom_hovertext = hover, plot_method = "ggplot", show_dendrogram = F, #colors = col_fun(-legend.limit:legend.limit)
+                     scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
+                                                                             limits = c(-legend.limit, legend.limit)), 
+                     #colors = color), 
+                     fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
     }
-  }else{
-    if(!is.na(file)){
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
-    }else{
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, colors = color, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
-    }
-    p <- p %>% config(displayModeBar = TRUE)
     #}
     #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
     #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
@@ -78,33 +106,37 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   return(p)
 }
 
-
+# Create Link to NCBI
 createLink <- function(val) {
   sprintf('<a href="https://www.ncbi.nlm.nih.gov/gene?term=(%s%%5BGene%%20Name%%5D)%%20AND%%20human%%5BOrganism%%5D" target="_blank">Info</a>', val)
 }
 
+# plot expression course of specific gene
 plotExpression <- function(expr.df, padj.df, gene){
   lfc.gene <- data.frame(t(expr.df[gene,]))
   lfc.gene <- merge(lfc.gene,t(padj.df[gene,]), by = "row.names")
   rownames(lfc.gene) <- lfc.gene[,1]
   lfc.gene <- lfc.gene[,-1]
   colnames(lfc.gene) <- c("lfc", "padj")
-  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.01,"*","")))
+  lfc.gene <- lfc.gene[complete.cases(lfc.gene),]
+  lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001,"***",ifelse(lfc.gene$padj<0.001,"**",ifelse(lfc.gene$padj<0.05,"*","")))
   lfc.gene$group <- sub("_.*","",rownames(lfc.gene))
+  #lfc.gene$time <- factor(sub(".*_(.*)\\..*","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
+  #lfc.gene$time <- factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = c("BPL","3h","6h","12h","24h","48h"))
   lfc.gene$time <- sub(".*_(.*_.*)","\\1",rownames(lfc.gene)) #factor(sub(".*_(.*)","\\1",rownames(lfc.gene)), levels = mixedsort(unique(sub(".*_(.*)","\\1",rownames(lfc.gene)))))
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL",lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_","",lfc.gene$time)))
-  lfc.min <- ifelse(min(lfc.gene$lfc)>0, 0, min(lfc.gene$lfc))
+  lfc.min <- ifelse(min(lfc.gene$lfc)>0, 0, min(lfc.gene$lfc)-0.25)
   lfc.max <- max(lfc.gene$lfc) + 0.25
   p1 <- ggplot(lfc.gene[grepl("h$",lfc.gene$time),], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + geom_line() + geom_point() +
-    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
-    geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) +
+    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.05    **: padj < 0.001    ***: padj < 0.0001") + 
+    geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) + scale_color_manual(values = color) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
           legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
           axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1,1,1,1), "cm"))
   p2 <-  ggplot(lfc.gene[grepl("BPL",lfc.gene$time),], aes(x=time, y=lfc, group=group, fill=group)) + geom_col(position = "dodge") +
-    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.01    **: padj < 0.001    ***: padj < 0.0001") + 
-    geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) +
+    labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.05    **: padj < 0.001    ***: padj < 0.0001") + 
+    geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) + scale_fill_manual(values = color) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
           legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15),
           axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
@@ -127,7 +159,7 @@ Sys.setenv("PATH" = paste(Sys.getenv("PATH"), "/root/miniconda3/bin", sep = .Pla
 #setwd("/tmp/")
 
 datasetInput <- NULL
-# Define UI for application that draws a histogram
+# Define UI for application
 ui <- fluidPage(
   tags$head(
     tags$style(
@@ -164,9 +196,8 @@ ui <- fluidPage(
   ),
   
   # Application title
-  titlePanel("Differential Gene Expression Analysis"),
+  titlePanel("Comparative Analysis of virus-induced Differential Gene Expression"),
   
-  # Sidebar with a slider input for number of bins 
   navbarPage(
     "", 
     tabPanel("Download Data",
@@ -188,9 +219,13 @@ ui <- fluidPage(
     ),
     tabPanel("Volcano Plot / MA-Plot",
              sidebarPanel(
+               #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
+               #div(style = "text-align:right", h5(strong("Help"))),
                div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed plot")), choices = c("Volcano plot", "MA-plot"), selected = "Volcano plot"),
+               bsTooltip(id = "plotTypeSingle", 
+                         title = "Here is some text with your instructions"),
                sliderInput("LFCsingle",
                            h5(strong("LFC cutoff:")),
                            min = 0,
@@ -205,6 +240,7 @@ ui <- fluidPage(
                #actionButton("export", "Export plot"),
                conditionalPanel(
                  condition = 'input.plotTypeSingle == "Volcano plot"',
+                 #d.V <- vector(),
                  plotlyOutput("volcanoPlot", height = "500px"),
                  br(),
                  dataTableOutput("clickVP")
@@ -230,7 +266,8 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               actionButton("addHeat", "Show heatmap"),
+               actionButton("addHeat1", "Show heatmap with plotly (only suitable for # genes < 1000)"),
+               actionButton("addHeat2", "Show heatmap with complexHeatmap"),
                #downloadButton("downHeatTime", "Download heatmap"),
                br(),
                br(),
@@ -247,6 +284,9 @@ ui <- fluidPage(
                  condition = 'input.plotType == "UpSet"',
                  upsetjsOutput("upset"), #, click = "upsetClick"),
                  br(),
+                 #h2("Table of selected intersection gene set"),
+                 div(textOutput("headerUpset"), style = "font-size:22px; font-style:bold; text-decoration-line:underline"),
+                 br(),
                  DT::dataTableOutput("clickedElements"),
                  br(),
                  br()
@@ -256,13 +296,18 @@ ui <- fluidPage(
                  condition = 'input.plotType == "Venn"',
                  upsetjsOutput("upsetVenn"), #, click = "upsetClick"),
                  br(),
+                 #h2("Table of selected intersection gene set"),
+                 #textOutput("headerVenn"),
+                 br(),
                  DT::dataTableOutput("clickedElementsVenn"),
                  br(),
                  br()
                  #plotOutput("heatmapTimeVenn", height = "750px")
                ),
                #conditionalPanel("output.show", plotlyOutput("heatmapTime", height = "750px")),
-               plotlyOutput("heatmapTime", height = "750px") %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 1.5)
+               #InteractiveComplexHeatmapOutput("heatmapTime")
+               htmlOutput("heatmapTimeComplex"),
+               plotlyOutput("heatmapTimePlotly", height = "750px") %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 1.5)
              )
     ),
     tabPanel("Gene Expression",
@@ -333,19 +378,19 @@ ui <- fluidPage(
                #downloadButton("downHeatAll", "Download heatmap"),
                plotlyOutput("heatmapAll", height = 1500) %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 2)
              )),
-    tabPanel("SNP Analysis",
-             sidebarPanel(
-               div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
-               selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-                           selected = NULL)
-             ),
-             mainPanel(
-               #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
-               #DT::dataTableOutput("SNPdata")
-               plotlyOutput("heatSNP", height = "1000px")
-               #verbatimTextOutput("SNPdata")
-             ))
+    #tabPanel("SNP Analysis",
+    #         sidebarPanel(
+    #           div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
+    #           selectInput("virusSNP", label = h5(strong("Select virus")), 
+    #                       choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+    #                       selected = NULL)
+    #         ),
+    #         mainPanel(
+    #           #plotOutput("heatSNP", height = "600px", click = "SNPclick"),
+    #           #DT::dataTableOutput("SNPdata")
+    #           plotlyOutput("heatSNP", height = "1000px")
+    #           #verbatimTextOutput("SNPdata")
+    #         ))
   )
 )
 
@@ -354,13 +399,23 @@ filedir <- getShinyOption("filedir")
 files.list <- list.files(filedir, pattern = ".*.csv", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
+# read colors for viruses
+color.df <- read.table("virus_colors.txt", header = FALSE, sep = "\t", stringsAsFactors = FALSE)
+color <- color.df[,2]
+names(color) <- color.df[,1]
+
 # Define server logic 
 server = function(input, output, session) {
   
-  # Define reactive values
-  data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, virus.df=NULL, plotX=NULL)
+  session$onSessionEnded(function(){
+    stopApp()
+  })
   
-  # Read data
+  # Define reactive values
+  data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, 
+                         virus.df=NULL, plotX=NULL, heatPlty=FALSE, heatCplx=FALSE, heatmap_id=0)
+  
+  # Read data from files.list
   withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
     datasetInput <- lapply(files.list, function(x){
       f <- read.csv(x, header = TRUE, stringsAsFactors = F, row.names = 1)
@@ -404,12 +459,14 @@ server = function(input, output, session) {
     ))
   })
   
+  # List all uploaded files
   output$uploadText <- renderText({
     if(!is.null(datasetInput)){
       print("Uploaded data:")
     }
   })
   
+  # Download the selected files
   output$table <- renderTable(
     data.frame(names(datasetInput))
     , colnames = F, rownames = F)
@@ -499,14 +556,14 @@ server = function(input, output, session) {
     df <- datasetInput[[input$fileToPlot]]
     df <- df[df$SYMBOL %in% selected$customdata,c("SYMBOL","log2FoldChange","padj")]
     df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
-    df$NCBI <- createLink(df$SYMBOL)
+    df$LinkToNCBI <- createLink(df$SYMBOL)
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot Volcano plot of selected sample
   output$volcanoPlot <- renderPlotly({
     p <- plotVolcano()
-    p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
+    p %>% config(toImageButtonOptions=list(format="svg", width=800, height=600, scale=2))
   })
   
   plotVolcano <- reactive({
@@ -532,14 +589,14 @@ server = function(input, output, session) {
     df <- datasetInput[[input$fileToPlot]]
     df <- df[df$SYMBOL %in% selected$customdata,c("SYMBOL","log2FoldChange","padj")]
     df[,c(2:ncol(df))] <- signif(df[,c(2:ncol(df))], 4)
-    df$NCBI <- createLink(df$SYMBOL)
+    df$LinkToNCBI <- createLink(df$SYMBOL)
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot MA-plot of selected sample
   output$MAPlot <- renderPlotly({
     p <- plotMA()
-    p %>% config(toImageButtonOptions=list(format="png", width=800, height=600, scale=2))
+    p %>% config(toImageButtonOptions=list(format="svg", width=800, height=600, scale=2))
   })
   
   plotMA <- reactive({
@@ -624,18 +681,6 @@ server = function(input, output, session) {
       write.xlsx(virus.df(), f)
     })
   
-  # download heatmap
-  output$downHeatTime <- downloadHandler(
-    filename = function(){
-      return(paste0(input$select_v, ".pdf"))},
-    content = function(f){
-      data.df <- data$heat_data
-      hover <- data$heat_hover
-      p <- plotHeatmap(data.df, colClust = F, border_col = NA, fontsize_r = 10, hover = hover, file = f)
-      #orca(f, p, format = "pdf", more_args = c("--disable-gpu", "--enable-webgl"))
-    }
-  )
-  
   # select times to plot
   output$selectTime <- renderUI({
     checkboxGroupInput("time", label = "Choose time points (for Venn: max. 5)",
@@ -651,56 +696,32 @@ server = function(input, output, session) {
   })
   
   
-  # set heatmap to NULL at selection of new virus
+  # set heatmap to NULL at selection of new virus or plot type or time point
   observe({
     input$select_v
     input$plotType
-    data$heat <- FALSE   
+    input$time
+    data$heatPlty <- FALSE
+    data$heatCplx <- FALSE
     data$dt <- NULL
-  })
-  
-  # clear data table and heatmap if plot type changes
-  observeEvent({
-    input$upset_click$elems
-  },
-  {
-    data$heat <- FALSE
-    data$dt <- 1
     #data_heat_time()
   })
   
-  observeEvent({
-    input$upsetVenn_click$elems
-  },
-  {
-    data$heat <- FALSE
-    data$dt <- 1
-    #data_heat_time()
-  })
+  # clear data table and heatmaps if intersection changes
+   observe({
+      input$upsetVenn_click$elems
+      input$upset_click$elems
+     data$heatPlty <- FALSE
+     data$heatCplx <- FALSE
+     data$dt <- 1
+   }) #%>% bindEvent(input$upset_click$elems)
   
-  # add heatmap
-  observeEvent(input$addHeat, {
-    data$heat <- TRUE
-    #data_heat_time()
-  })
-  
-  output$show <- reactive({
-    print(data$heat)
-    return(data$heat)
-  })
-  
-  output$heatmapTime <- renderPlotly({
-    if(!data$heat){
-      data$heat_data <- NULL
-      data$heat_hover <- NULL
-      #return(NULL)
+  # create dataframe for heatmap
+  data_heatmap <- reactive({ 
+    data.df <- virus.df()
+    if(is.null(data.df)){
+      return(NULL)
     }else{
-      data.df <- virus.df()
-      if(is.null(data.df)){
-        data$heat_data <- NULL
-        data$heat_hover <- NULL
-        #return(NULL)
-      }
       data.rows <- data.df$SYMBOL
       data.df <- data.df[,-c(1,ncol(data.df)), drop=F]
       if(nrow(data.df)>1){
@@ -711,32 +732,74 @@ server = function(input, output, session) {
       rownames(data.df) <- data.rows
       data.df <- data.df[,c(TRUE, FALSE), drop=F]
       colnames(data.df) <- sub(".LFC","",colnames(data.df))
-      hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data.df), function(s){
-        s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
-        dataset <- datasetInput[[s]]
-        dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
-        dataset <- dataset[dataset$SYMBOL %in% rownames(data.df), ]
-        dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
-        dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
-        df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
-                                                         dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
-                                                         s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
-        colnames(df.tmp) <- c("SYMBOL", s)
-        return(df.tmp)
-      }, simplify = F)
-      )
-      rownames(hover) <- hover$SYMBOL
-      hover <- subset(hover, select=-c(SYMBOL))
-      data.df <- data.df[order(rowMeans(data.df)),]
-      hover <- hover[rownames(data.df),]
-      data$heat_data <- data.df
-      data$heat_hover <- hover
-      plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover)
+      return(data.df)
     }
-    
-    
+  }) 
+  
+  # set heatmap to TRUE if respective button is clicked 
+  observe({
+    if(input$addHeat2){
+      data$heatCplx <- T
+    }
   })
   
+  observe({
+    if(input$addHeat1){
+      data$heatPlty <- T
+    }
+    #print(input$addHeat1)
+  })
+  
+  # if heatCplx TRUE: plot heatmap with InteractiveCompelxHeatmap
+  # if heatCplx FALSE: remove heatmap
+  observe({
+    if(data$heatCplx){
+      data$heatmap_id <- sample(1:1000, 1)
+      df <- data_heatmap()
+      if(!is.null(df)){
+        ht <- plotHeatmap(df, colClust = F, rowClust = T, complexHT = T)
+        ht <- draw(ht)
+        dev.off()
+        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", action = "click", compact = FALSE,
+                                        heatmap_id = paste0("ht", data$heatmap_id), output_ui_float = T, close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
+      }
+    }else{
+      removeUI(paste0("#ht", data$heatmap_id, "_heatmap_widget *"), multiple = T)
+    }
+  }) #%>% bindEvent(input$addHeat2, ignoreInit = T)
+  
+  # if heatPlty TRUE: plot heatmap with heatmaply
+  # if heatPlty FALSE: remove heatmap
+  output$heatmapTimePlotly <- renderPlotly(
+    if(data$heatPlty){
+      data.df <- data_heatmap()
+      if(!is.null(data.df)){
+        hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data.df), function(s){
+          s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
+          dataset <- datasetInput[[s]]
+          dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
+          dataset <- dataset[dataset$SYMBOL %in% rownames(data.df), ]
+          dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
+          dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
+          df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
+                                                           dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
+                                                           s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
+          colnames(df.tmp) <- c("SYMBOL", s)
+          return(df.tmp)
+        }, simplify = F)
+        )
+        rownames(hover) <- hover$SYMBOL
+        hover <- hover[,-1] #subset(hover, select=-c(SYMBOL))
+        data.df <- data.df[order(rowMeans(data.df)),]
+        hover <- hover[rownames(data.df),]
+        p <- plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover, heatmaply = T)
+        p <- p %>% config(toImageButtonOptions=list(format="svg", width=800, height=600, scale=2))
+        return(p)
+      }
+    }
+  )
+  
+  # create dataframe with LFC and padj for selection
   virus.df <- reactive({
     virus_id <- NULL
     if(input$plotType=="UpSet"){
@@ -750,30 +813,34 @@ server = function(input, output, session) {
     }else{
       data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste0(input$select_v, ".*_", input$time, collapse = "|"), names(datasetInput))]), function(x){
         y <- datasetInput[[x]]
+        #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
         y <- y[y$SYMBOL %in% virus_id, c("SYMBOL","log2FoldChange","padj"), drop=F]
         colnames(y) <- c("SYMBOL", paste0(x,".LFC"), paste0(x,".padj"))
         return(y)
       })
       )
       data.df <- data.df[,c(1,mixedorder(colnames(data.df)[-1])+1),drop=F]
-      data.df$Link <- createLink(data.df$SYMBOL)
+      data.df$LinkToNCBI <- createLink(data.df$SYMBOL)
       return(data.df)
     }
   })
   
   # display table with elements in clicked plot area of UpSet plot
+  #output$headerUpset <- renderText({ paste("Gene list for:", input$upset_click$name) })
+  
   output$clickedElements <- renderDataTable({
     dt <- data$dt
-    if(is.null(dt)){
-      data.frame("SYMBOL"=NULL, "LinkToNCBI"=NULL)
+    df <- virus.df()
+    if(is.null(df) | is.null(dt)){
+      return(data.frame("SYMBOL"=character(), "LinkToNCBI"=character()))
     }else{
-      df <- virus.df()
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
+      colnames(df)[1] <- gsub("&", " & ", input$upset_click$name)
       return(df)
     }
-  }, escape = F)
+  }, escape = F, rownames = F)
   
-  # plot UpSet plot of selected virus und times
+  # plot UpSet plot of selected virus and times
   output$upset <- renderUpsetjs({
     if(is.null(input$select_v) | is.null(input$time)){
       return(NULL)
@@ -793,16 +860,19 @@ server = function(input, output, session) {
   })
   
   # display table with elements in clicked plot area of Venn plot
+  output$headerVenn <- renderText({ paste("Gene list of the intersection:", input$upsetVenn_click$name) })
+  
   output$clickedElementsVenn <- renderDataTable({
     dt <- data$dt
-    if(is.null(dt)){
-      data.frame("SYMBOL"=NULL, "LinkToNCBI"=NULL)
+    df <- virus.df()
+    if(is.null(df) | is.null(dt)){
+      return(data.frame("SYMBOL"=character(), "LinkToNCBI"=character()))
     }else{
-      df <- virus.df()
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
+      colnames(df)[1] <- gsub("&", " & ", input$upsetVenn_click$name)
       return(df)
     }
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot Venn diagram of selected virus und times
   output$upsetVenn <- renderUpsetjs({
@@ -816,8 +886,9 @@ server = function(input, output, session) {
       names(id.list) <- sub(".*_vs_", "", names(id.list))
       names(id.list) <- sub("Mock_", "", names(id.list))
       if(length(id.list)>0){
-        upsetjsVennDiagram() %>% upsetjs::fromList(id.list) %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>%
-          chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px", value.label = "14px") %>% interactiveChart()
+        upsetjsVennDiagram() %>% fromList(id.list) %>% 
+          chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "18px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
+          interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
   })
@@ -844,17 +915,16 @@ server = function(input, output, session) {
     ))
   })
   
-  output$debug <- renderPrint({
-    print("Installed packages:")
-    print(installed.packages()[,c(1,3)])
-  })
-  
   # download gene expression plot
   output$downGeneXpng <- downloadHandler(
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".png"))},
     content = function(f){
-      ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
+      ggsave(f, data$plotX, "png", width = 8, height = 10, dpi = 400)
+      #png(f, width = 8, height = 10, dpi = 400)
+      #plot(data$plotX)
+      #dev.off()
+      #ggsave(f, plot_geneX(), "png", width = 8, height = 10, dpi = 400)
     }
   )
   
@@ -862,36 +932,25 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(paste(input$selectVirus, collapse = "_"), "_", toupper(input$gene), ".svg"))},
     content = function(f){
-      ggsave(f, plot_geneX(), "svg", width = 8, height = 10, dpi = 400)
+      ggsave(f, data$plotX, "svg", width = 8, height = 10, dpi = 400)
+      #svg(f, width = 8, height = 10, dpi = 400)
+      #plot(data$plotX)
+      #dev.off()
+      #ggsave(f, plot_geneX(), "svg", width = 8, height = 10, dpi = 400)
     }
   )
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
-    p <- plot_geneX()
-    #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
-    #print(data_padj())
-    if(is.null(p)){
-      return(NULL)
-    }else{
-      #p <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
-      plot(p)
-    }
-  })
-  
-  plot_geneX <- reactive({
-    #  list(input$selectVirus, input$gene)
     if(is.null(data_lfc()) || input$gene==""){
       return(NULL)
     }else{
-      if(!toupper(input$gene) %in% rownames(data_lfc())){
-        return(NULL)
-      }else{
-        plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
-      }
+      data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+      plot(data$plotX)
     }
   })
   
+  # create dataframe of LFCs for selected virus(es)
   data_lfc <- reactive({
     if(is.null(input$selectVirus)){
       return(NULL)
@@ -906,6 +965,7 @@ server = function(input, output, session) {
     }
   })
   
+  # create dataframe of padjs for selected virus(es)
   data_padj <- reactive({
     if(is.null(input$selectVirus)){
       return(NULL)
@@ -919,14 +979,6 @@ server = function(input, output, session) {
       return(padj.df)
     }
   })
-  
-  #observeEvent(plot_geneX(), {
-  #  if(is.null(input$selectVirus) | is.null(input$gene)){
-  #    return(NULL)
-  #  }else{
-  #    data$plotX <- plotExpression(expr.df = lfc.df, padj.df = padj.df, gene = toupper(input$gene))
-  #  }
-  #})
   
   ## Virus comparison
   
@@ -966,18 +1018,21 @@ server = function(input, output, session) {
     ))
   })
   
+  # create dataframe of LFC and padj for the selected area
   all.df <- reactive({
+    #data$all.df
     gene_id <- unlist(input$upsetAll_click$elems)
     cond <- ifelse(grepl("Virus",input$cond), sub("Virus", "(?!Mock).*",input$cond), input$cond)
     data.df <- Reduce(function(x,y)merge(x,y,by="SYMBOL", all = T),lapply(names(datasetInput[grep(paste(as.vector(outer(input$select, cond, paste, sep=".*")), collapse = "|"), names(datasetInput), perl = T)]), function(x){
       y <- datasetInput[[x]]
+      #y$log2FoldChange <- ifelse(y$padj<0.05 & apply(y[,grep("normalized", colnames(y))],1,max) >= 10, y$log2FoldChange, "-")
       y <- y[y$SYMBOL %in% gene_id, c("SYMBOL","log2FoldChange", "padj")]
       colnames(y) <- c("SYMBOL", paste0(x, ".LFC"), paste0(x,".padj"))
       return(y)
     })
     )
     data.df <- data.df[,c(1,mixedorder(colnames(data.df)[-1])+1),drop=F]
-    data.df$Link <- createLink(data.df$SYMBOL)
+    data.df$LinkToNCBI <- createLink(data.df$SYMBOL)
     return(data.df)
   })
   
@@ -986,6 +1041,7 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".csv"))},
     content = function(f){
+      #write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
       write.csv(all.df(), f, row.names = F)
     },
     contentType = "csv")
@@ -999,12 +1055,16 @@ server = function(input, output, session) {
   
   # display table of genes in selected area
   output$clickedElementsAll <- renderDataTable({
-    df <- data.frame("Symbol"=unlist(input$upsetAll_click$elems), "Link" = createLink(unlist(input$upsetAll_click$elems)))
+    genes <- unlist(input$upsetAll_click$elems)
+    if(is.null(genes) | is.null(input$select) | is.null(input$cond)){
+      genes <- character()
+    }
+    df <- data.frame("Symbol" = genes, "LinkToNCBI" = createLink(unlist(input$upsetAll_click$elems)))
     if(length(unlist(input$upsetAll_click$name)) > 0){
       colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
     }
     return(df)
-  }, escape = F)
+  }, escape = F, rownames = F)
   
   # plot UpSet plot with selected viruses and conditions
   output$upsetAll <- renderUpsetjs({
@@ -1013,6 +1073,7 @@ server = function(input, output, session) {
     }else{
       cond <- ifelse(grepl("Virus",input$cond), sub("Virus", "(?!Mock).*",input$cond), input$cond)
       id.list <- sapply(input$select,function(virus){
+        #print(names(datasetInput[grep(paste(virus, cond, sep = ".*", collapse = "|"), names(datasetInput))]))
         unique(unlist(lapply(datasetInput[grep(paste(virus, cond, sep = ".*", collapse = "|"), names(datasetInput), perl = T)], function(x){
           return(x[which(abs(x$log2FoldChange) > input$LFCall & x$padj < 0.05 & apply(x[,grep("normalized", colnames(x))],1,max) >= 10),"SYMBOL"])
         })))
@@ -1035,6 +1096,7 @@ server = function(input, output, session) {
     }
   )
   
+  # help text
   observeEvent(input$help5,{
     showModal(modalDialog(
       title = tags$div("Help for ", tags$b("Heatmap Virus Comparison")),
@@ -1057,17 +1119,22 @@ server = function(input, output, session) {
   output$heatmapAll <- renderPlotly({
     plot_heat_all()
   })
-  
+   
+  # plot heatmap of genes in table
   plot_heat_all <- reactive({
     if(is.null(input$select) | is.null(input$cond) | is.null(input$upsetAll_click$elems)){
       return(NULL)
     }else{
       data <- all.df()
       data.rows <- data$SYMBOL
-      data <- data[,-c(1,ncol(data))]
-      data <- data[,c(TRUE, FALSE)]
+      data <- data[,-c(1,ncol(data)), drop = F]
+      data <- data[,c(TRUE, FALSE), drop = F]
       colnames(data) <- sub(".LFC","",colnames(data))
-      data <- apply(data,2,as.numeric)
+      if(nrow(data)>1){
+        data <- apply(data,2,as.numeric)
+      }else{
+        data <- as.data.frame(t(apply(data,2,as.numeric)))
+      }
       rownames(data) <- data.rows
       hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data), function(s){
         s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
@@ -1087,7 +1154,7 @@ server = function(input, output, session) {
       hover <- subset(hover, select=-c(SYMBOL))
       hover <- hover[order(rownames(hover)),]
       data <- data[order(rownames(data)),]
-      plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12)
+      plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12, heatmaply = T, complexHT = F)
     }
   })
   
@@ -1178,7 +1245,7 @@ server = function(input, output, session) {
       
       plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z = v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F,
               text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
-        layout(shapes=lapply(x_break-0.5, vline)) %>% config(displayModeBar = TRUE) %>% 
+        layout(shapes=lapply(x_break-0.5, vline)) %>% config(displayModeBar = TRUE) %>%
         add_annotations(
           text = x,
           x = 0.5,

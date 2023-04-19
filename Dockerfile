@@ -37,6 +37,8 @@ RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("dplyr"); \
                 install.packages("heatmaply"); \
                 install.packages("https://cran.r-project.org/src/contrib/Archive/upsetjs/upsetjs_1.6.0.tar.gz", repos=NULL, type="source"); \
+                install.packages("BiocManager"); \
+                BiocManager::install(c("ComplexHeatmap", "InteractiveComplexHeatmap")); \
                 '
 
 # Delete default sample app
