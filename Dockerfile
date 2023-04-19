@@ -1,4 +1,4 @@
-FROM rocker/shiny:4.1.2
+FROM rocker/shiny:4.2.3
 
 LABEL maintainer=TODO
 LABEL description=TODO
