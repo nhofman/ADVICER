@@ -32,7 +32,7 @@ library(InteractiveComplexHeatmap)
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1, setWidth = F,
                         rowClust = T, colClust = T, fontsize_r = 0.8, fontsize_c = 10, annCol = NA, annRow = NA, border_col = "grey60", plot.fig = T,
                         legend.cut = 1, filter_col = NA, annotation_colors = NA, break_step = 0.1, display_numbers = F, hover = NULL, file = NA,
-                        heatmaply = F, complexHT = T, legend.limit.up = NA, legend.limit.down = NA){
+                        legend.limit.up = NA, legend.limit.down = NA){
   if(is.na(row_subset[1])){
     xx <- x
   }else{
@@ -51,58 +51,24 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   # Calculate legend limits, if not defined
   if(is.na(legend.limit.up)){
     legend.limit.up <- quantile(unlist(xx), na.rm = TRUE, probs = legend.cut)
-    print(legend.limit.up)
   }
   if(is.na(legend.limit.down)){
     legend.limit.down <- quantile(unlist(xx), na.rm = TRUE, probs = (1-legend.cut))  
-    print(legend.limit.down)
   }
   
   color <- vector()
   legend.limit <- max(legend.limit.up, abs(legend.limit.down))
   print(legend.limit)
-  legend.limit.round <- round(legend.limit)
-  if(-1 %in% sign(xx.unlist)){
-    color_down <- colorRampPalette(c("blue", "white"))(length(seq(-legend.limit, 0, break_step))) #blue(n=length(breakSeq)-1) #, low="blue", mid = "white", high="red")
-    color <- c(color,color_down)
-  }
-  if(1 %in% sign(xx.unlist)){
-    color_up <- colorRampPalette(c("white", "red"))(length(seq(0, legend.limit, break_step)))
-    color <- c(color,color_up)
-  }
+  legend.limit.round <- ceiling(legend.limit)
   col_fun <- circlize::colorRamp2(c(-legend.limit, 0, legend.limit), c("blue", "white", "red"), space = "LAB")
-  print( ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
-                                       limits = c(-legend.limit, legend.limit)))
+  
   #print(xx)
   #if((nrow(xx)>1 | ncol(xx)>1)){
-  if(complexHT){
-    #pushViewport(viewport(gp = gpar(fontfamily = "Helvetica")))
-    p <- Heatmap(as.matrix(xx), cluster_columns = colClust, cluster_rows = rowClust, col = col_fun, show_row_dend = F, 
-                 heatmap_legend_param = list(title = "", at = c(-legend.limit.round, -legend.limit.round/2, 0, legend.limit.round/2, legend.limit.round)),
-                 row_names_gp = gpar(fontfamily = "Helvetica"), column_names_gp = gpar(fontfamily = "Helvetica"))
-    #popViewport()
-  }
-  if(heatmaply){
-    if(!is.na(file)){
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, custom_hovertext = hover, plot_method = "plotly", show_dendrogram = F, 
-                     scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
-                                                                             limits = c(-legend.limit, legend.limit)), 
-                     fontsize_col = fontsize_c, fontsize_row = fontsize_r, file = file) 
-    }else{
-      p <- heatmaply(xx, Colv = F, Rowv = rowClust, custom_hovertext = hover, plot_method = "ggplot", show_dendrogram = F, #colors = col_fun(-legend.limit:legend.limit)
-                     scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
-                                                                             limits = c(-legend.limit, legend.limit)), 
-                     #colors = color), 
-                     fontsize_col = fontsize_c, fontsize_row = fontsize_r) 
-    }
-    #}
-    #p <- p %>% config(toImageButtonOptions=list(format="png", width="None", height="None"))
-    #pheatmap(xx, cluster_cols=colClust, cluster_rows=rowClust, clustering_distance_rows = distMethod, clustering_distance_cols = distMethod,
-    #         clustering_method = clusterMethod, annotation_col=annCol, annotation_row = annRow, 
-    #         breaks = breakSeq, color = color, annotation_colors = annotation_colors,
-    #         fontsize_row = fontsize_row, fontsize_col = fontsize_col, cutree_rows = clrn, 
-    #         border_color = border_col, display_numbers = display_numbers)
-  }
+  #pushViewport(viewport(gp = gpar(fontfamily = "Helvetica")))
+  p <- Heatmap(as.matrix(xx), cluster_columns = colClust, cluster_rows = rowClust, col = col_fun, show_row_dend = F, 
+               heatmap_legend_param = list(title = "", at = c(-legend.limit.round, -legend.limit.round/2, 0, legend.limit.round/2, legend.limit.round)),
+               row_names_gp = gpar(fontfamily = "Helvetica"), column_names_gp = gpar(fontfamily = "Helvetica"))
+  #popViewport()
   return(p)
 }
 
@@ -284,7 +250,7 @@ ui <- fluidPage(
                  upsetjsOutput("upset"), #, click = "upsetClick"),
                  br(),
                  #h2("Table of selected intersection gene set"),
-                 div(textOutput("headerUpset"), style = "font-size:22px; font-style:bold; text-decoration-line:underline"),
+                 #div(textOutput("headerUpset"), style = "font-size:22px; font-style:bold; text-decoration-line:underline"),
                  br(),
                  DT::dataTableOutput("clickedElements"),
                  br(),
@@ -296,7 +262,7 @@ ui <- fluidPage(
                  upsetjsOutput("upsetVenn"), #, click = "upsetClick"),
                  br(),
                  #h2("Table of selected intersection gene set"),
-                 #textOutput("headerVenn"),
+                 textOutput("headerVenn"),
                  br(),
                  DT::dataTableOutput("clickedElementsVenn"),
                  br(),
@@ -351,7 +317,9 @@ ui <- fluidPage(
                            max = 100,
                            value = 20, 
                            step = 5),
-               #br(),
+               br(),
+               actionButton("addHeatAll", "Show heatmap"),
+               br(),
                br(),
                h5(strong("Download table (includes LFC and padj)")),
                downloadButton("downallXLSX", "Download as xlsx", class = "butt"),
@@ -364,18 +332,11 @@ ui <- fluidPage(
              mainPanel(
                upsetjsOutput("upsetAll"), #, click = "upsetClick"),
                br(),
-               DT::dataTableOutput("clickedElementsAll")
+               DT::dataTableOutput("clickedElementsAll"),
+               br(),
+               htmlOutput("heatmapAll")
              )
-    ),
-    tabPanel("Heatmap Virus Comparison",
-             sidebarPanel(
-               div(style = "text-align:right", actionButton("help5", label = div(strong("Help"), icon("question")))),
-               h5("Please select an intersection in the tab 'Virus Comparison' to show the corresponding heatmap.")
-             ),
-             mainPanel(
-               #downloadButton("downHeatAll", "Download heatmap"),
-               plotlyOutput("heatmapAll", height = 1500) %>% withSpinner(type = 5, color.background = "white", color = "grey", size = 2)
-             )),
+    )
     #tabPanel("SNP Analysis",
     #         sidebarPanel(
     #           div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))),
@@ -411,7 +372,7 @@ server = function(input, output, session) {
   
   # Define reactive values
   data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, 
-                         virus.df=NULL, plotX=NULL, heatPlty=FALSE, heatCplx=FALSE, heatmap_id=0)
+                         virus.df=NULL, plotX=NULL, heatPlty=FALSE, heatCplx=FALSE, heatmap_id=0, heatAll=FALSE, heatmap_id_all=0)
   
   # Read data from files.list
   withProgress(message = 'PROCESSING DATA...', detail = "This may take a while...", value = 0,{
@@ -693,7 +654,6 @@ server = function(input, output, session) {
                        choiceValues = sub(".*vs","vs",names(datasetInput)[grep(input$select_v, names(datasetInput))]))
   })
   
-  
   # set heatmap to NULL at selection of new virus or plot type or time point
   observe({
     input$select_v
@@ -705,15 +665,63 @@ server = function(input, output, session) {
   })
   
   # clear data table and heatmaps if intersection changes
-   observe({
-      input$upsetVenn_click$elems
-      input$upset_click$elems
-     data$heatCplx <- FALSE
-     data$dt <- 1
-     print(upset_selection$upset_selected)
-     upset_selection$upset_selected <- input$upset_click
-     print(upset_selection$upset_selected)
-   }) #%>% bindEvent(input$upset_click$elems)
+  observe({
+    input$upsetVenn_click$elems
+    input$upset_click$elems
+    data$heatCplx <- FALSE
+    data$dt <- 1
+    #upset_selection$upset_selected <- input$upset_click$name
+  }) #%>% bindEvent(input$upset_click$elems)
+  
+  
+  # set heatmap to TRUE if button is clicked 
+  observe({
+    if(input$addHeat2){
+      data$heatCplx <- T
+    }
+  })
+  
+  # if heatCplx TRUE: plot heatmap with InteractiveCompelxHeatmap
+  # if heatCplx FALSE: remove heatmap
+  observe({
+    if(data$heatCplx){
+      data$heatmap_id <- sample(1:1000, 1)
+      df <- data_heatmap()
+      if(!is.null(df)){
+        ht <- plotHeatmap(df, colClust = F, rowClust = T)
+        ht <- draw(ht)
+        dev.off()
+        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", action = "click", compact = FALSE,
+                                        heatmap_id = paste0("ht", data$heatmap_id), output_ui_float = F, output_ui = htmlOutput("info"),
+                                        click_action = click_action, close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
+      }
+    }else{
+      removeUI(paste0("#ht", data$heatmap_id, "_heatmap_widget *"), multiple = T)
+    }
+  }) #%>% bindEvent(input$addHeat2, ignoreInit = T)
+  
+  click_action <- function(df, output) {
+    output$info <- renderUI({
+      if(is.null(df)) { # have not clicked or brushed into the heatmap body
+        DataFrame()
+      } else {
+        data.df <- data_heatmap()
+        gene <- rownames(data.df[df$row_index,,drop=F])
+        sample <- colnames(data.df[,df$column_index,drop=F])
+        sample.parts <- strsplit(sample,"_vs_")[[1]]
+        dataset <- datasetInput[[sample]]
+        datainfo <- dataset[dataset$SYMBOL==gene,,drop=F]
+        datainfo[,c(5:ncol(datainfo))] <- signif(datainfo[,c(5:ncol(datainfo))], 4) 
+        datainfo$GENENAME <- ifelse(is.na(datainfo$GENENAME), "", datainfo$GENENAME)
+        virus.norm <- apply(datainfo[,grep(sample.parts[1], colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        mock.norm <- apply(datainfo[,grep(sub("_",".*",sample.parts[2]), colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        HTML(qq("<p style='background-color:#FF8080;color:white;padding:5px;'>You have clicked on heatmap @{df$heatmap}, 
+                row @{df$row_index}, column @{df$column_index}<br />Sample: @{sample}<br />Gene: @{gene}<br />
+                Genename: @{datainfo$GENENAME}<br />LFC: @{datainfo$log2FoldChange}<br />padj: @{datainfo$padj}<br />
+                Normalized counts @{sample.parts[1]}: @{virus.norm}<br />Normalized counts @{sample.parts[2]}: @{mock.norm} </p>"))
+      }
+    })
+  }
   
   # create dataframe for heatmap
   data_heatmap <- reactive({ 
@@ -734,62 +742,6 @@ server = function(input, output, session) {
       return(data.df)
     }
   }) 
-  
-  # set heatmap to TRUE if respective button is clicked 
-  observe({
-    if(input$addHeat2){
-      data$heatCplx <- T
-    }
-  })
-  
-  # if heatCplx TRUE: plot heatmap with InteractiveCompelxHeatmap
-  # if heatCplx FALSE: remove heatmap
-  observe({
-    if(data$heatCplx){
-      data$heatmap_id <- sample(1:1000, 1)
-      df <- data_heatmap()
-      if(!is.null(df)){
-        ht <- plotHeatmap(df, colClust = F, rowClust = T, complexHT = T)
-        ht <- draw(ht)
-        dev.off()
-        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", action = "click", compact = FALSE,
-                                        heatmap_id = paste0("ht", data$heatmap_id), output_ui_float = T, close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
-      }
-    }else{
-      removeUI(paste0("#ht", data$heatmap_id, "_heatmap_widget *"), multiple = T)
-    }
-  }) #%>% bindEvent(input$addHeat2, ignoreInit = T)
-  
-  # if heatPlty TRUE: plot heatmap with heatmaply
-  # if heatPlty FALSE: remove heatmap
-  output$heatmapTimePlotly <- renderPlotly(
-    if(data$heatPlty){
-      data.df <- data_heatmap()
-      if(!is.null(data.df)){
-        hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data.df), function(s){
-          s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
-          dataset <- datasetInput[[s]]
-          dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
-          dataset <- dataset[dataset$SYMBOL %in% rownames(data.df), ]
-          dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
-          dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
-          df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
-                                                           dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
-                                                           s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
-          colnames(df.tmp) <- c("SYMBOL", s)
-          return(df.tmp)
-        }, simplify = F)
-        )
-        rownames(hover) <- hover$SYMBOL
-        hover <- hover[,-1] #subset(hover, select=-c(SYMBOL))
-        data.df <- data.df[order(rowMeans(data.df)),]
-        hover <- hover[rownames(data.df),]
-        p <- plotHeatmap(data.df, colClust = F, rowClust = T, border_col = NA, fontsize_r = 10, hover = hover, heatmaply = T)
-        p <- p %>% config(toImageButtonOptions=list(format="svg", width=800, height=600, scale=2))
-        return(p)
-      }
-    }
-  )
   
   # create dataframe with LFC and padj for selection
   virus.df <- reactive({
@@ -827,7 +779,6 @@ server = function(input, output, session) {
       return(data.frame("SYMBOL"=character(), "LinkToNCBI"=character()))
     }else{
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
-      colnames(df)[1] <- gsub("&", " & ", input$upset_click$name)
       return(df)
     }
   }, escape = F, rownames = F)
@@ -846,25 +797,14 @@ server = function(input, output, session) {
       if(length(id.list)>0){
         upsetjs(sizingPolicy = upsetjsSizingPolicy(padding = 10)) %>% upsetjs::fromList(id.list) %>% generateDistinctIntersections() %>%
           chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
-          chartLayout(padding = 40, bar.padding = 0.2) %>% chartTheme(selection.color = "red", has.selection.color = "black") %>% 
-          chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>% interactiveChart()
+          chartLayout(padding = 40, bar.padding = 0.2) %>% chartTheme(selection.color = "orange") %>% 
+          chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE)) %>% interactiveChart("click") 
       }
     }
   })
   
-  upset_selection <- reactiveValues(upset_selected = '')
-  
-  observeEvent(upset_selection$upset_selected, {
-    print(upset_selection$upset_selected)
-    upsetjsProxy('upset', session) %>%
-      setSelection(upset_selection$upset_selected)
-  })
-  
-  
-  #upsetjsProxy("upsetTime") %>% setSelection(input$upset_click$elems)
-  
   # display table with elements in clicked plot area of Venn plot
-  output$headerVenn <- renderText({ paste("Gene list of the intersection:", input$upsetVenn_click$name) })
+  #output$headerVenn <- renderText({ paste("Table of intersection", input$upsetVenn_click$name) })
   
   output$clickedElementsVenn <- renderDataTable({
     dt <- data$dt
@@ -873,7 +813,6 @@ server = function(input, output, session) {
       return(data.frame("SYMBOL"=character(), "LinkToNCBI"=character()))
     }else{
       df[,c(2:(ncol(df)-1))] <- signif(df[,c(2:(ncol(df)-1))], 4)
-      colnames(df)[1] <- gsub("&", " & ", input$upsetVenn_click$name)
       return(df)
     }
   }, escape = F, rownames = F)
@@ -892,7 +831,7 @@ server = function(input, output, session) {
       if(length(id.list)>0){
         upsetjsVennDiagram() %>% fromList(id.list) %>% 
           chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "18px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
-          interactiveChart() %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
+          chartTheme(selection.color = "orange") %>% interactiveChart("click") %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
       }
     }
   })
@@ -1064,9 +1003,9 @@ server = function(input, output, session) {
       genes <- character()
     }
     df <- data.frame("Symbol" = genes, "LinkToNCBI" = createLink(unlist(input$upsetAll_click$elems)))
-    if(length(unlist(input$upsetAll_click$name)) > 0){
-      colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
-    }
+    #if(length(unlist(input$upsetAll_click$name)) > 0){
+    #  colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
+    #}
     return(df)
   }, escape = F, rownames = F)
   
@@ -1085,7 +1024,7 @@ server = function(input, output, session) {
       id.list <- id.list[sapply(id.list, length) > 0]
       upsetjs() %>% fromList(id.list) %>% generateDistinctIntersections(limit = input$limit) %>%  chartLayout(padding = 40, bar.padding = 0.2) %>%
         chartFontSizes(font.family = "Helvetica", chart.label = "16px", set.label = "14px", bar.label = "14px", axis.tick = "14px", export.label = "13px") %>% 
-        interactiveChart()  %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
+        interactiveChart("click") %>% chartProps(exportButtons=list(share=FALSE, vega=FALSE, dump=FALSE))
     }
   })
   
@@ -1119,11 +1058,37 @@ server = function(input, output, session) {
     ))
   })
   
-  # plot heatmap of genes in selected area
-  output$heatmapAll <- renderPlotly({
-    plot_heat_all()
+  # set heatmap to TRUE if button is clicked 
+  observe({
+    if(input$addHeatAll){
+      data$heatAll <- T
+    }
   })
-   
+  
+  #
+  click_action_all <- function(df, output) {
+    output$infoAll <- renderUI({
+      if(is.null(df)) { # have not clicked or brushed into the heatmap body
+        DataFrame()
+      } else {
+        data.df <- plot_heat_all()
+        gene <- rownames(data.df[df$row_index,,drop=F])
+        sample <- colnames(data.df[,df$column_index,drop=F])
+        sample.parts <- strsplit(sample,"_vs_")[[1]]
+        dataset <- datasetInput[[sample]]
+        datainfo <- dataset[dataset$SYMBOL==gene,,drop=F]
+        datainfo[,c(5:ncol(datainfo))] <- signif(datainfo[,c(5:ncol(datainfo))], 4) 
+        datainfo$GENENAME <- ifelse(is.na(datainfo$GENENAME), "", datainfo$GENENAME)
+        virus.norm <- apply(datainfo[,grep(sample.parts[1], colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        mock.norm <- apply(datainfo[,grep(sub("_",".*",sample.parts[2]), colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        HTML(qq("<p style='background-color:#FF8080;color:white;padding:5px;'>You have clicked on heatmap @{df$heatmap}, 
+                row @{df$row_index}, column @{df$column_index}<br />Sample: @{sample}<br />Gene: @{gene}<br />
+                Genename: @{datainfo$GENENAME}<br />LFC: @{datainfo$log2FoldChange}<br />padj: @{datainfo$padj}<br />
+                Normalized counts @{sample.parts[1]}: @{virus.norm}<br />Normalized counts @{sample.parts[2]}: @{mock.norm} </p>"))
+      }
+    })
+  }
+  
   # plot heatmap of genes in table
   plot_heat_all <- reactive({
     if(is.null(input$select) | is.null(input$cond) | is.null(input$upsetAll_click$elems)){
@@ -1158,9 +1123,28 @@ server = function(input, output, session) {
       hover <- subset(hover, select=-c(SYMBOL))
       hover <- hover[order(rownames(hover)),]
       data <- data[order(rownames(data)),]
-      plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12, heatmaply = T, complexHT = F)
+      return(data)
+      #plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12)
     }
   })
+  
+  observe({
+    if(data$heatAll){
+      data$heatmap_id_all <- sample(1:1000, 1)
+      df <- plot_heat_all()
+      if(!is.null(df)){
+        ht <- plotHeatmap(df, colClust = F, rowClust = T)
+        ht <- draw(ht)
+        dev.off()
+        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapAll", action = "click", compact = FALSE,
+                                        heatmap_id = paste0("ht", data$heatmap_id_all), output_ui_float = F, output_ui = htmlOutput("infoAll"), 
+                                        click_action = click_action_all,
+                                        close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
+      }
+    }else{
+      removeUI(paste0("#ht", data$heatmap_id_all, "_heatmap_widget *"), multiple = T)
+    }
+  }) 
   
   ## SNP analysis
   
