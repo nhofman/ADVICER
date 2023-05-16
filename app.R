@@ -27,6 +27,8 @@ library(heatmaply)
 library(shinycssloaders)
 library(ComplexHeatmap)
 library(InteractiveComplexHeatmap)
+library(GetoptLong)
+library(S4Vectors)
 
 # Create heatmap with plotly or ComplexHeatmap
 plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMethod = "complete", clrn = 1, clcn = 1, setWidth = F,
@@ -162,7 +164,7 @@ ui <- fluidPage(
   ),
   
   # Application title
-  titlePanel("Comparative Analysis of virus-induced Differential Gene Expression"),
+  titlePanel("ViVi - Visualization of Virus-induced RNA response"),
   
   navbarPage(
     "", 
@@ -183,7 +185,7 @@ ui <- fluidPage(
                #textOutput("debug", container = pre)
              )
     ),
-    tabPanel("Volcano Plot / MA-Plot",
+    tabPanel("Volcano Plot / MA Plot",
              sidebarPanel(
                #div(style = "display:inline-block; float:right",actionButton("help", label = "", icon = icon("question"))),
                #div(style = "text-align:right", h5(strong("Help"))),
@@ -232,7 +234,8 @@ ui <- fluidPage(
                            max = 10,
                            value = 1, 
                            step = 0.5),
-               actionButton("addHeat2", "Show heatmap"),
+               actionButton("addHeat2", "Generate heatmap", class = "butt1"),
+               
                #downloadButton("downHeatTime", "Download heatmap"),
                br(),
                br(),
@@ -317,8 +320,8 @@ ui <- fluidPage(
                            max = 100,
                            value = 20, 
                            step = 5),
-               br(),
-               actionButton("addHeatAll", "Show heatmap"),
+               #br(),
+               actionButton("addHeatAll", "Generate heatmap", class = "butt1"),
                br(),
                br(),
                h5(strong("Download table (includes LFC and padj)")),
@@ -371,7 +374,7 @@ server = function(input, output, session) {
   })
   
   # Define reactive values
-  data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, 
+  data <- reactiveValues(select_points=NULL, heat=FALSE, heat_data = NULL, heat_hover = NULL, dt=NULL, snp=NULL, all.df=NULL, all.dt = 1,
                          virus.df=NULL, plotX=NULL, heatPlty=FALSE, heatCplx=FALSE, heatmap_id=0, heatAll=FALSE, heatmap_id_all=0)
   
   # Read data from files.list
@@ -464,19 +467,19 @@ server = function(input, output, session) {
       size = "l",
       tags$div("Volcano plots and MA-plots for uploaded files. Each file contains the results of the differential gene expression analysis with DEseq2.
       The sidebar shows the available options to adapt the plots:"),
-      img(src="volcano_sidebar.png"),
+      img(src="volcano_sidebar.jpg"),
       tags$div("The Volcano plot shows the log2FoldChange (LFC) and the negative log10 of the adjusted p-value (padj) for the chosen comparison. Significantly differentially expressed genes are colored blue (down-regulated) or red (up-regulated). A gene is considered differentially expressed if: LFC > ", tags$i("LFC cutoff") ,"and padj < 0.05 and a normalized gene count of at least one sample ≥ 10."),
       HTML("<br><br>"),
-      img(src="Volcano_plot.png"),
+      img(src="volcano_plot.png"),
       HTML("<br><br>"),
       tags$div("The modebar in the upper right corner of the plot shows:"),
       HTML("<br><br>"),
-      img(src="volcano_modebar.png"),
+      img(src="volcano_modebar.jpg"),
       HTML("<br><br>"),
       tags$div("Further information for one or multiple points, like gene symbol, LFC and padj, can be shown by mouse over."),
-      img(src="volcano_plot_select.png"),
       tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order."),
-      img(src="Volcano_table.png"),
+      img(src="volcano_plot_select.jpg"),
+      #img(src="Volcano_table.png"),
       easyClose = TRUE
     ))
   })
@@ -583,30 +586,30 @@ server = function(input, output, session) {
       title = tags$div("Help for ", tags$b("Compare Time Points")),
       size = "l",
       tags$div("This tab is meant to compare the differential gene expression between different time points of infection. Each gene list contains all genes differentially expressed with |LFC| > ", tags$i("LFC cutoff")," and padj < 0.05 and a normalized gene count of at least one sample ≥ 10. Intersections can either be shown as Venn diagram or UpSet plot ", tags$a("(info)", href="https://jku-vds-lab.at/tools/upset/", target="_blank"), ". The sidebar shows the available options to adapt the plots:"),
-      img(src="time_sidebar.png"),
+      img(src="time_sidebar.jpg"),
       "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.",
-      img(src="time_venn.png"),
+      img(src="time_venn.jpg"),
       tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. The table can be downloaded as xlsx or csv file."),
       HTML("<br><br>"),
-      img(src="time_venn_select.png"),
+      img(src="time_venn_select.jpg"),
       HTML("<br><br>"),
-      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 4467 genes are differentially expressed (see bar) after 6h, 12h and 24h (see black dots in column below)."),
-      img(src="time_upset.png"),
+      tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 263 genes are differentially expressed (see bar) after 6h and 12h (see black dots in column below)."),
+      img(src="time_upset.jpg"),
       tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."),
       HTML("<br><br>"),
-      img(src="time_upset_select.png"),
+      img(src="time_upset_select.jpg"),
       HTML("<br><br>"),
-      tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar:"),
-      img(src="time_heatmap.png"),
+      tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar. To get information about the underlying data click on a specific cell."),
+      img(src="time_heatmap_select.jpg"),
       HTML("<br><br>"),
-      tags$div("The modebar in the upper right corner of the heatmap shows the following functions, that allow the user to interact with the plot:"),
+      tags$div("The modebar beneath the heatmap shows the following functions, that allow the user to interact with and download the plot:"),
       HTML("<br><br>"),
-      img(src="heatmap_modebar.png"),
+      img(src="time_heatmap_modebar.jpg"),
       HTML("<br><br>"),
-      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'selected sub-heatmap' next to the original heatmap. The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'configure' and zoom again into the heatmap."),
       HTML("<br><br>"),
-      img(src="time_heatmap_zoom.png"),
-      img(src="time_heatmap_zoom2.png"),
+      img(src="time_heatmap_zoom.jpg"),
+      img(src="time_heatmap_zoom2.jpg"),
       easyClose = TRUE
     ))
   })
@@ -668,7 +671,7 @@ server = function(input, output, session) {
   observe({
     input$upsetVenn_click$elems
     input$upset_click$elems
-    data$heatCplx <- FALSE
+    #data$heatCplx <- FALSE
     data$dt <- 1
     #upset_selection$upset_selected <- input$upset_click$name
   }) #%>% bindEvent(input$upset_click$elems)
@@ -691,9 +694,10 @@ server = function(input, output, session) {
         ht <- plotHeatmap(df, colClust = F, rowClust = T)
         ht <- draw(ht)
         dev.off()
-        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", action = "click", compact = FALSE,
-                                        heatmap_id = paste0("ht", data$heatmap_id), output_ui_float = F, output_ui = htmlOutput("info"),
-                                        click_action = click_action, close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
+        InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapTimeComplex", layout = "1-(2|3)", compact = FALSE,
+                                        heatmap_id = paste0("ht", data$heatmap_id), output_ui_float = F, output_ui = htmlOutput("info"), 
+                                        click_action = click_action, close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table", 
+                                        height2 = 500)
       }
     }else{
       removeUI(paste0("#ht", data$heatmap_id, "_heatmap_widget *"), multiple = T)
@@ -715,8 +719,7 @@ server = function(input, output, session) {
         datainfo$GENENAME <- ifelse(is.na(datainfo$GENENAME), "", datainfo$GENENAME)
         virus.norm <- apply(datainfo[,grep(sample.parts[1], colnames(datainfo)),drop=F], 1, paste, collapse="; ")
         mock.norm <- apply(datainfo[,grep(sub("_",".*",sample.parts[2]), colnames(datainfo)),drop=F], 1, paste, collapse="; ")
-        HTML(qq("<p style='background-color:#FF8080;color:white;padding:5px;'>You have clicked on heatmap @{df$heatmap}, 
-                row @{df$row_index}, column @{df$column_index}<br />Sample: @{sample}<br />Gene: @{gene}<br />
+        HTML(qq("<p style='background-color:white;color:black;border:1px solid black;padding:5px;font-size:14px;'>Sample: @{sample}<br />Gene: @{gene}<br />
                 Genename: @{datainfo$GENENAME}<br />LFC: @{datainfo$log2FoldChange}<br />padj: @{datainfo$padj}<br />
                 Normalized counts @{sample.parts[1]}: @{virus.norm}<br />Normalized counts @{sample.parts[2]}: @{mock.norm} </p>"))
       }
@@ -845,15 +848,15 @@ server = function(input, output, session) {
       size = "l",
       tags$div("This tab is meant to explore the expression profile of genes over time.",
                "The sidebar shows the available options to adapt the plots:"),
-      img(src="expression_sidebar.png"),
+      img(src="expression_sidebar.jpg"),
       HTML("<br><br>"),
       tags$div("The plot shows the expression of the selected gene for the chosen viruses as log2FoldChange (LFC) over time. The stars represent the significance of the LFC."),
       HTML("<br><br>"),
-      img(src="expression_plot_upper.png"),
+      img(src="expression_plot_upper.jpg"),
       HTML("<br><br>"),
       tags$div("The plot shows the expression of the selected gene as LFC. The left hand side shows the 24 h time point of the selected viruses compared to the inactivated virus (Virus BPL), whereas the right hand side shows the inactivated virus compared to the uninfected control (Mock BPL)."),
       HTML("<br><br>"),
-      img(src="expression_plot_lower.png"),
+      img(src="expression_plot_lower.jpg"),
       easyClose = TRUE
     ))
   })
@@ -945,21 +948,49 @@ server = function(input, output, session) {
       size = "l",
       tags$div("This tab is meant to compare the genes that are differentially expressed after the infection with different viruses.",
                "The sidebar shows the available options to adapt the plots:"),
-      img(src="viruses_sidebar.png"),
+      img(src="viruses_sidebar.jpg"),
       HTML("<br><br>"),
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout ", tags$a("(info)", href = "https://jku-vds-lab.at/tools/upset/", target="_blank"), ".",
                "This approach allows to compare a large number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots.",
                "For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered differentially expressed if: log2FoldChange (LFC) > ",tags$i("LFC cutoff")," and adjusted p-value (padj) < 0.05 and a normalized gene count of at least one sample ≥ 10."),
-      img(src="viruses_upset.png"),
+      img(src="viruses_upset.jpg"),
       tags$div("Genes in an intersection can be listed in a sortable table along with a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded in xlsx or csv format and then also contains the LFC and padj for all selected conditions.",
-               "The selected bar in the example (colored orange) shows, that there are 218 genes that are diff. expressed in at least one of the included time points (see bar) in MARV, EBOV and NIV (see black dots in column below)."),
+               "The selected bar in the example (colored orange) shows, that there are 318 genes that are diff. expressed in at least one of the included time points (see bar) in NiV and RSV (see black dots in column below)."),
       HTML("<br><br>"),
-      img(src="viruses_upset_select.png"),
+      img(src="viruses_upset_select.jpg"),
       HTML("<br><br>"),
-      tags$div("To display a selected intersection as heatmap click on the respective intersection, wait until the table is updated and switch to the tab 'Heatmap Virus Comparison'."),
+      tags$div("To display a selected intersection as heatmap click on the button in the sidebar. The user can get further information about the underlying data by clicking on a specific cell."),
+      img(src="viruses_heatmap_select.jpg"),
+      HTML("<br><br>"),
+      tags$div("The modebar beneath the heatmap allow the user to interact with and download the plot:"),
+      HTML("<br><br>"),
+      img(src="viruses_heatmap_modebar.jpg"),
+      HTML("<br><br>"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'selected sub-heatmap' next to the original heatmap. The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'configure' and zoom again into the heatmap."),
+      HTML("<br><br>"),
+      img(src="viruses_heatmap_zoom.jpg"),
+      img(src="viruses_heatmap_zoom2.jpg"),
       easyClose = TRUE
     ))
   })
+  
+  
+  # download genes of selected plot area as csv or xlsx
+  output$downallCSV <- downloadHandler(
+    filename = function(){
+      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".csv"))},
+    content = function(f){
+      #write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
+      write.csv(all.df(), f, row.names = F)
+    },
+    contentType = "csv")
+  
+  output$downallXLSX <- downloadHandler(
+    filename = function(){
+      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".xlsx"))},
+    content = function(f){
+      write.xlsx(all.df(), f)
+    })
   
   # create dataframe of LFC and padj for the selected area
   all.df <- reactive({
@@ -979,33 +1010,17 @@ server = function(input, output, session) {
     return(data.df)
   })
   
-  # download genes of selected plot area as csv or xlsx
-  output$downallCSV <- downloadHandler(
-    filename = function(){
-      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".csv"))},
-    content = function(f){
-      #write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
-      write.csv(all.df(), f, row.names = F)
-    },
-    contentType = "csv")
-  
-  output$downallXLSX <- downloadHandler(
-    filename = function(){
-      return(paste0(gsub("&","_",unlist(input$upsetAll_click$name)), ".xlsx"))},
-    content = function(f){
-      write.xlsx(all.df(), f)
-    })
-  
   # display table of genes in selected area
   output$clickedElementsAll <- renderDataTable({
     genes <- unlist(input$upsetAll_click$elems)
-    if(is.null(genes) | is.null(input$select) | is.null(input$cond)){
-      genes <- character()
-    }
-    df <- data.frame("Symbol" = genes, "LinkToNCBI" = createLink(unlist(input$upsetAll_click$elems)))
+    if(is.null(data$all.dt) | is.null(genes) | is.null(input$select) | is.null(input$cond)){
+      df <- data.frame("Symbol" = character(), "LinkToNCBI" = character())
+    }else{
+      df <- data.frame("Symbol" = genes, "LinkToNCBI" = createLink(unlist(input$upsetAll_click$elems)))
     #if(length(unlist(input$upsetAll_click$name)) > 0){
     #  colnames(df)[1] <- gsub("&"," & ",unlist(input$upsetAll_click$name))
     #}
+    }
     return(df)
   }, escape = F, rownames = F)
   
@@ -1028,36 +1043,6 @@ server = function(input, output, session) {
     }
   })
   
-  # download heatmap
-  output$downHeatAll <- downloadHandler(
-    filename = function(){
-      return(paste0(paste(input$select, collapse = "_"), ".png"))},
-    content = function(f){
-      png(filename = f)
-      print(plot_heat_all())
-      dev.off()
-    }
-  )
-  
-  # help text
-  observeEvent(input$help5,{
-    showModal(modalDialog(
-      title = tags$div("Help for ", tags$b("Heatmap Virus Comparison")),
-      size = "l",
-      tags$div("This tab shows the corresponding heatmap after an intersection is selected in the tab 'Virus Comparison'."),
-      img(src="viruses_heatmap.png"),
-      tags$div("The modebar in the upper right corner of the plot shows the following functions, that allow the user to interact with the plot: "),
-      HTML("<br><br>"),
-      img(src="heatmap_modebar.png"),
-      HTML("<br><br>"),
-      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. To get information about the underlying data mouseover a specific cell."),
-      HTML("<br><br>"),
-      img(src="viruses_heatmap_zoom.png"),
-      img(src="viruses_heatmap_zoom2.png"),
-      easyClose = TRUE
-    ))
-  })
-  
   # set heatmap to TRUE if button is clicked 
   observe({
     if(input$addHeatAll){
@@ -1065,32 +1050,21 @@ server = function(input, output, session) {
     }
   })
   
-  #
-  click_action_all <- function(df, output) {
-    output$infoAll <- renderUI({
-      if(is.null(df)) { # have not clicked or brushed into the heatmap body
-        DataFrame()
-      } else {
-        data.df <- plot_heat_all()
-        gene <- rownames(data.df[df$row_index,,drop=F])
-        sample <- colnames(data.df[,df$column_index,drop=F])
-        sample.parts <- strsplit(sample,"_vs_")[[1]]
-        dataset <- datasetInput[[sample]]
-        datainfo <- dataset[dataset$SYMBOL==gene,,drop=F]
-        datainfo[,c(5:ncol(datainfo))] <- signif(datainfo[,c(5:ncol(datainfo))], 4) 
-        datainfo$GENENAME <- ifelse(is.na(datainfo$GENENAME), "", datainfo$GENENAME)
-        virus.norm <- apply(datainfo[,grep(sample.parts[1], colnames(datainfo)),drop=F], 1, paste, collapse="; ")
-        mock.norm <- apply(datainfo[,grep(sub("_",".*",sample.parts[2]), colnames(datainfo)),drop=F], 1, paste, collapse="; ")
-        HTML(qq("<p style='background-color:#FF8080;color:white;padding:5px;'>You have clicked on heatmap @{df$heatmap}, 
-                row @{df$row_index}, column @{df$column_index}<br />Sample: @{sample}<br />Gene: @{gene}<br />
-                Genename: @{datainfo$GENENAME}<br />LFC: @{datainfo$log2FoldChange}<br />padj: @{datainfo$padj}<br />
-                Normalized counts @{sample.parts[1]}: @{virus.norm}<br />Normalized counts @{sample.parts[2]}: @{mock.norm} </p>"))
-      }
-    })
-  }
+  # remove heatmap if input changes
+  observe({
+    input$select
+    input$cond
+    data$heatAll <- F
+    data$all.dt <- NULL
+  })
   
-  # plot heatmap of genes in table
-  plot_heat_all <- reactive({
+  observe({
+    input$upsetAll_click$elems
+    data$all.dt <- 1
+  })
+  
+  # create dataframe for heatmap of genes in table
+  data_heat_all <- reactive({
     if(is.null(input$select) | is.null(input$cond) | is.null(input$upsetAll_click$elems)){
       return(NULL)
     }else{
@@ -1105,41 +1079,47 @@ server = function(input, output, session) {
         data <- as.data.frame(t(apply(data,2,as.numeric)))
       }
       rownames(data) <- data.rows
-      hover <- Reduce(function(x,y)merge(x,y,by="SYMBOL",all=T), sapply(colnames(data), function(s){
-        s.gr <- sub("_.*","",strsplit(s,"_vs_")[[1]])
-        dataset <- datasetInput[[s]]
-        dataset[,c(5:ncol(dataset))] <- signif(dataset[,c(5:ncol(dataset))], 4) 
-        dataset <- dataset[dataset$SYMBOL %in% rownames(data), ]
-        dataset$c1 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[1]), colnames(dataset)), drop = F] , 1 , paste , collapse = "; " )
-        dataset$c2 <- apply(dataset[ , grep(paste0("normalized.*", s.gr[2]), colnames(dataset))] , 1 , paste , collapse = "; " )
-        df.tmp <- data.frame(dataset[,"SYMBOL"], sprintf("Gene: %s<br />Sample: %s<br />LFC: %s<br />padj: %s<br />%s: %s<br />%s: %s", 
-                                                         dataset[,"SYMBOL"], s, dataset[,"log2FoldChange"], dataset[,"padj"],
-                                                         s.gr[1], dataset[,"c1"], s.gr[2], dataset[,"c2"]))
-        colnames(df.tmp) <- c("SYMBOL", s)
-        return(df.tmp)
-      }, simplify = F)
-      )
-      rownames(hover) <- hover$SYMBOL
-      hover <- subset(hover, select=-c(SYMBOL))
-      hover <- hover[order(rownames(hover)),]
       data <- data[order(rownames(data)),]
       return(data)
-      #plotHeatmap(data, colClust = F, rowClust = T, border_col = NA, hover = hover, setWidth = T, fontsize_r = 12, fontsize_c = 12)
     }
   })
   
+  # click action function to create hover data
+  click_action_all <- function(df, output) {
+    output$infoAll <- renderUI({
+      if(is.null(df)) { # have not clicked or brushed into the heatmap body
+        DataFrame()
+      } else {
+        data.df <- data_heat_all()
+        gene <- rownames(data.df[df$row_index,,drop=F])
+        sample <- colnames(data.df[,df$column_index,drop=F])
+        sample.parts <- strsplit(sample,"_vs_")[[1]]
+        dataset <- datasetInput[[sample]]
+        datainfo <- dataset[dataset$SYMBOL==gene,,drop=F]
+        datainfo[,c(5:ncol(datainfo))] <- signif(datainfo[,c(5:ncol(datainfo))], 4) 
+        datainfo$GENENAME <- ifelse(is.na(datainfo$GENENAME), "", datainfo$GENENAME)
+        virus.norm <- apply(datainfo[,grep(sample.parts[1], colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        mock.norm <- apply(datainfo[,grep(sub("_",".*",sample.parts[2]), colnames(datainfo)),drop=F], 1, paste, collapse="; ")
+        HTML(qq("<p style='background-color:white;color:black;border:1px solid black;padding:5px;font-size:14px;'>Sample: @{sample}<br />Gene: @{gene}<br />
+                Genename: @{datainfo$GENENAME}<br />LFC: @{datainfo$log2FoldChange}<br />padj: @{datainfo$padj}<br />
+                Normalized counts @{sample.parts[1]}: @{virus.norm}<br />Normalized counts @{sample.parts[2]}: @{mock.norm} </p>"))
+      }
+    })
+  }
+  
+  # plot heatmap
   observe({
     if(data$heatAll){
       data$heatmap_id_all <- sample(1:1000, 1)
-      df <- plot_heat_all()
+      df <- data_heat_all()
       if(!is.null(df)){
         ht <- plotHeatmap(df, colClust = F, rowClust = T)
         ht <- draw(ht)
         dev.off()
         InteractiveComplexHeatmapWidget(input, output, session, ht, output_id = "heatmapAll", action = "click", compact = FALSE,
                                         heatmap_id = paste0("ht", data$heatmap_id_all), output_ui_float = F, output_ui = htmlOutput("infoAll"), 
-                                        click_action = click_action_all,
-                                        close_button = T, width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
+                                        click_action = click_action_all, close_button = T, height2 = 500, layout = "1-(2|3)",
+                                        width1 = 600, height1 = 750, title1 = "Heatmap of genes shown in table")
       }
     }else{
       removeUI(paste0("#ht", data$heatmap_id_all, "_heatmap_widget *"), multiple = T)
@@ -1155,14 +1135,14 @@ server = function(input, output, session) {
       size = "l",
       tags$div("This tab is meant to explore the results of a variant analysis."),
       HTML("<br>"),
-      img(src="snp_sidebar.png"),
+      img(src="snp_sidebar.jpg"),
       HTML("<br><br>"),
       tags$div("The modebar in the upper right corner of the plot shows the following functions, that allow the user to interact with the plot: "),
       HTML("<br>"),
-      img(src="snp_modebar.png"),
+      img(src="snp_modebar.jpg"),
       HTML("<br><br>"),
       tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over a cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s) as well as the frequency of a SNP and the read depth at the SNP position."),
-      img(src="snp_mouseover.png"),
+      img(src="snp_mouseover.jpg"),
       easyClose = TRUE
     ))
   })
