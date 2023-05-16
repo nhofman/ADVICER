@@ -164,7 +164,7 @@ ui <- fluidPage(
   ),
   
   # Application title
-  titlePanel("ViVi - Visualization of Virus-induced RNA response"),
+  titlePanel(div(HTML("<b>ViVi</b> - <b>Vi</b>sualization of <b>V</b>irus-<b>i</b>nduced RNA response"))),
   
   navbarPage(
     "", 
@@ -192,8 +192,6 @@ ui <- fluidPage(
                div(style = "text-align:right", actionButton("help1", label = div(strong("Help"), icon("question")))),
                htmlOutput("fileSelect"),
                radioButtons("plotTypeSingle", label = h5(strong("Displayed plot")), choices = c("Volcano plot", "MA-plot"), selected = "Volcano plot"),
-               bsTooltip(id = "plotTypeSingle", 
-                         title = "Here is some text with your instructions"),
                sliderInput("LFCsingle",
                            h5(strong("LFC cutoff:")),
                            min = 0,
@@ -594,21 +592,24 @@ server = function(input, output, session) {
       img(src="time_venn_select.jpg"),
       HTML("<br><br>"),
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 263 genes are differentially expressed (see bar) after 6h and 12h (see black dots in column below)."),
-      img(src="time_upset.jpg"),
       tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."),
-      HTML("<br><br>"),
+      #img(src="time_upset.jpg"),
       img(src="time_upset_select.jpg"),
       HTML("<br><br>"),
+      #HTML("<br><br>"),
       tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar. To get information about the underlying data click on a specific cell."),
       img(src="time_heatmap_select.jpg"),
       HTML("<br><br>"),
       tags$div("The modebar beneath the heatmap shows the following functions, that allow the user to interact with and download the plot:"),
-      HTML("<br><br>"),
-      img(src="time_heatmap_modebar.jpg"),
-      HTML("<br><br>"),
-      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'selected sub-heatmap' next to the original heatmap. The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'configure' and zoom again into the heatmap."),
-      HTML("<br><br>"),
+      #HTML("<br><br>"),
+      img(src="heatmap_modebar.jpg"),
+      #HTML("<br><br>"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'Selected sub-heatmap' next to the original heatmap."),
+      HTML("<br>"),
       img(src="time_heatmap_zoom.jpg"),
+      HTML("<br><br>"),
+      tags$div("The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'Configure sub-heatmap' and zoom again into the heatmap."),
+      HTML("<br>"),
       img(src="time_heatmap_zoom2.jpg"),
       easyClose = TRUE
     ))
@@ -852,11 +853,11 @@ server = function(input, output, session) {
       HTML("<br><br>"),
       tags$div("The plot shows the expression of the selected gene for the chosen viruses as log2FoldChange (LFC) over time. The stars represent the significance of the LFC."),
       HTML("<br><br>"),
-      img(src="expression_plot_upper.jpg"),
+      img(src="expression_plot_upper.png"),
       HTML("<br><br>"),
       tags$div("The plot shows the expression of the selected gene as LFC. The left hand side shows the 24 h time point of the selected viruses compared to the inactivated virus (Virus BPL), whereas the right hand side shows the inactivated virus compared to the uninfected control (Mock BPL)."),
       HTML("<br><br>"),
-      img(src="expression_plot_lower.jpg"),
+      img(src="expression_plot_lower.png"),
       easyClose = TRUE
     ))
   })
@@ -962,13 +963,12 @@ server = function(input, output, session) {
       tags$div("To display a selected intersection as heatmap click on the button in the sidebar. The user can get further information about the underlying data by clicking on a specific cell."),
       img(src="viruses_heatmap_select.jpg"),
       HTML("<br><br>"),
-      tags$div("The modebar beneath the heatmap allow the user to interact with and download the plot:"),
-      HTML("<br><br>"),
-      img(src="viruses_heatmap_modebar.jpg"),
-      HTML("<br><br>"),
-      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'selected sub-heatmap' next to the original heatmap. The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'configure' and zoom again into the heatmap."),
+      tags$div("The modebar beneath the heatmap allows the user to interact with and download the plot:"),
+      img(src="heatmap_modebar.jpg"),
+      tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'Selected sub-heatmap' next to the original heatmap."),
       HTML("<br><br>"),
       img(src="viruses_heatmap_zoom.jpg"),
+      tags$div("The user can also interact with this plot using the buttons beneath the sub-heatmap. In order to further zoom into the current sub-heatmap the user can make it interactive by clicking the respective button in 'Configure sub-heatmap' and zoom again into the heatmap."),
       img(src="viruses_heatmap_zoom2.jpg"),
       easyClose = TRUE
     ))
