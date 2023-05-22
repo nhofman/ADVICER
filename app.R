@@ -5,21 +5,17 @@
 # 
 
 library(shiny)
-#library(shinyBS)
 library(DT)
 library(VennDiagram)
 library(UpSetR)
 library(upsetjs)
 library(ggplot2)
 library(plotly)
-library(pheatmap)
 library(gtools)
 library(openxlsx)
 library(vcfR)
 library(tidytext)
 library(dplyr)
-library(heatmaply)
-library(shinycssloaders)
 library(ComplexHeatmap)
 library(InteractiveComplexHeatmap)
 library(GetoptLong)
@@ -78,26 +74,26 @@ plotExpression <- function(expr.df, padj.df, gene){
   rownames(lfc.gene) <- lfc.gene[, 1]
   lfc.gene <- lfc.gene[, -1]
   colnames(lfc.gene) <- c("lfc", "padj")
-  lfc.gene <- lfc.gene[complete.cases(lfc.gene), ]
+  #lfc.gene$padj[is.na(lfc.gene$padj)] <- 10
+  #lfc.gene <- lfc.gene[complete.cases(lfc.gene), ]
   lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001, "***", ifelse(lfc.gene$padj<0.001, "**", ifelse(lfc.gene$padj<0.05, "*", "")))
   lfc.gene$group <- sub("_.*", "", rownames(lfc.gene))
   lfc.gene$time <- sub(".*_(.*_.*)", "\\1", rownames(lfc.gene)) 
   lfc.gene$time <- ifelse(lfc.gene$time=="Mock_BPL", "Virus BPL:Mock BPL", ifelse(grepl("BPL", lfc.gene$time), "Virus 24h:Virus BPL", sub("Mock_", "", lfc.gene$time)))
-  View(lfc.gene)
   lfc.min <- ifelse(min(lfc.gene$lfc, na.rm = T)>0, 0, min(lfc.gene$lfc, na.rm = T)-0.25)
-  print(lfc.min)
   lfc.max <- max(lfc.gene$lfc, na.rm = T) + 0.25
-  print(lfc.max)
-  p1 <- ggplot(lfc.gene[grepl("h$", lfc.gene$time), ], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + geom_line() + geom_point() +
+  p1 <- ggplot(lfc.gene[grepl("h$", lfc.gene$time), ], aes(x=factor(time, levels = mixedsort(unique(time))), y=lfc, group=group, color=group)) + 
+    geom_line(na.rm = T) + geom_point(na.rm = T) +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "Time", color = "Virus", caption = "*: padj < 0.05    **: padj < 0.001    ***: padj < 0.0001") + 
-    geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE) + ylim(c(lfc.min, lfc.max)) + scale_color_manual(values = color) +
+    geom_text(aes(label=sig), nudge_y = 0.1, show.legend = FALSE, na.rm = T) + ylim(c(lfc.min, lfc.max)) + scale_color_manual(values = color) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
           legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15), 
           axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
-  p2 <-  ggplot(lfc.gene[grepl("BPL", lfc.gene$time), ], aes(x=time, y=lfc, group=group, fill=group)) + geom_col(position = "dodge") +
+  p2 <-  ggplot(lfc.gene[grepl("BPL", lfc.gene$time), ], aes(x=time, y=lfc, group=group, fill=group)) + 
+    geom_col(position = "dodge", na.rm = T) +
     labs(title = paste("Expression profile of", gene), y = "Log2FoldChange", x = "", fill = "Virus", caption = "*: padj < 0.05    **: padj < 0.001    ***: padj < 0.0001") + 
-    geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F) + ylim(c(lfc.min, lfc.max)) + scale_fill_manual(values = color) +
+    geom_text(aes(label=sig), position=position_dodge(width=0.9), vjust=-0.25, show.legend = F, na.rm = T) + ylim(c(lfc.min, lfc.max)) + scale_fill_manual(values = color) +
     theme(plot.caption = element_text(hjust = 0, size = 15, family = "Helvetica"), legend.text = element_text(size = 15, family = "Helvetica"), 
           legend.title = element_text(size = 15, face = "bold", family = "Helvetica"), axis.text = element_text(size = 15), 
           axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
@@ -152,7 +148,7 @@ ui <- fluidPage(
   ), 
   
   # Application title
-  titlePanel(div(HTML("<b>ViVi</b> - <b>Vi</b>sualization of <b>V</b>irus-<b>i</b>nduced RNA response"))), 
+  titlePanel(div(HTML("<b>ViVi</b> - <b>Vi</b>sualization of <b>V</b>irus-<b>i</b>nduced RNA response")), windowTitle = "ViVi"), 
   
   # Define tabs
   navbarPage(
@@ -541,7 +537,7 @@ server = function(input, output, session) {
       "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.", 
       img(src="time_venn.jpg"), 
       tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. The table can be downloaded as xlsx or csv file."), 
-      HTML("<br><br>"), 
+      #HTML("<br><br>"), 
       img(src="time_venn_select.jpg"), 
       HTML("<br><br>"), 
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 263 genes are differentially expressed (see bar) after 6h and 12h (see black dots in column below)."), 
@@ -561,7 +557,7 @@ server = function(input, output, session) {
       HTML("<br>"), 
       img(src="time_heatmap_zoom.jpg"), 
       HTML("<br><br>"), 
-      tags$div("The user can also interact with this plot using the buttons beneath the sub-heatmap. There the user can configure or download the plot as well as export it as table. To zoom further into the current sub-heatmap, the user can make it interactive by clicking the corresponding button in 'Configure sub-heatmap' and zoom into the heatmap as previously described."), 
+      tags$div("The user can also interact with this sub-heatmap using the buttons beneath the box. There the user can configure or download the plot as well as export it as table. To zoom further into the current sub-heatmap, the user can make it interactive by clicking the corresponding button in 'Configure sub-heatmap' and zoom into the heatmap as previously described."), 
       HTML("<br>"), 
       img(src="time_heatmap_zoom2.jpg"), 
       easyClose = TRUE
@@ -894,7 +890,7 @@ server = function(input, output, session) {
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'Selected sub-heatmap' next to the original heatmap."), 
       HTML("<br><br>"), 
       img(src="viruses_heatmap_zoom.jpg"), 
-      tags$div("The user can also interact with this plot using the buttons beneath the sub-heatmap. There the user can configure or download the plot as well as export it as table. To zoom further into the current sub-heatmap, the user can make it interactive by clicking the corresponding button in 'Configure sub-heatmap' and zoom into the heatmap as previously described."), 
+      tags$div("The user can also interact with this sub-heatmap using the buttons beneath the box. There the user can configure or download the plot as well as export it as table. To zoom further into the current sub-heatmap, the user can make it interactive by clicking the corresponding button in 'Configure sub-heatmap' and zoom into the heatmap as previously described."), 
       img(src="viruses_heatmap_zoom2.jpg"), 
       easyClose = TRUE
     ))
