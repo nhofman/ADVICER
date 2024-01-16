@@ -1,4 +1,4 @@
-# ViVi - Visualization of virus-induced RNA response
+# ADVICER - Analysis Dashboard of Virus-Induced Cell Response based on RNA-seq data
 # 
 # Shiny application for the comparative visualization of virus-induced differential gene expression
 #
@@ -148,8 +148,7 @@ ui <- fluidPage(
   ), 
   
   # Application title
-  titlePanel(div(HTML("<b>ViVi</b> - <b>Vi</b>sualization of <b>V</b>irus-<b>i</b>nduced RNA response")), windowTitle = "ViVi"), 
-  
+  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard of <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-seq data")), windowTitle = "ADVICER"), 
   # Define tabs
   navbarPage(
     "", 
@@ -312,6 +311,9 @@ ui <- fluidPage(
 filedir <- getShinyOption("filedir")
 files.list <- list.files(filedir, pattern = ".*.csv", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
+
+# Define font family
+#family = "Helvetica"
 
 # read colors for viruses
 color.df <- read.table("virus_colors.txt", header = FALSE, sep = "\t", stringsAsFactors = FALSE)
