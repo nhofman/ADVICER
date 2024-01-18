@@ -1,4 +1,4 @@
-# ADVICER - Analysis Dashboard of Virus-Induced Cell Response based on RNA-seq data
+# ADVICER - Analysis Dashboard for Virus-Induced Cell Response based on RNA-seq data
 # 
 # Shiny application for the comparative visualization of virus-induced differential gene expression
 #
@@ -58,7 +58,7 @@ plotHeatmap <- function(x, row_subset = NA, distMethod = "euclidean", clusterMet
   
   p <- Heatmap(as.matrix(xx), cluster_columns = colClust, cluster_rows = rowClust, col = col_fun, show_row_dend = F, 
                heatmap_legend_param = list(title = "", at = c(-legend.limit.round, -legend.limit.round/2, 0, legend.limit.round/2, legend.limit.round)), 
-               row_names_gp = gpar(fontfamily = "Helvetica"), column_names_gp = gpar(fontfamily = "Helvetica"))
+               row_names_gp = gpar(family = "Helvetica"), column_names_gp = gpar(family = "Helvetica"))
   return(p)
 }
 
@@ -148,7 +148,7 @@ ui <- fluidPage(
   ), 
   
   # Application title
-  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard of <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-seq data")), windowTitle = "ADVICER"), 
+  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-seq data")), windowTitle = "ADVICER"), 
   # Define tabs
   navbarPage(
     "", 
