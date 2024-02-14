@@ -1,25 +1,20 @@
-# virus-shiny-app
+# ADVICER - Analysis Dashboard for Virus-Induced CEll Response based on RNA-seq data
 
-## Docker
+ADVICER is an R Shiny application developed to interactively visualize the differential gene expression analysis results of the [SFB1021][sfb] joint virus project (https://www.sfb1021.de/). In this project HuH7 cells were infected with different human pathogenic viruses for defined time periods. Total RNA was analyzed to identify common and unique transcriptional changes.
+The application uses DESeq2 result tables to: 
+* generate MAplots and Volcano plots for each table
+* compare the differentially expressed genes (DEGs) between different time points of a virus 
+* compare DEGs between different viruses 
+* plot the expression of a specific gene over time 
+* show SNPs and Indels for each virus over time
 
-### Build docker image
-```
-docker build -t <image-name, e.g. ljelonek/virus:latest> .
-```
+## Citation/Paper
+In preparation
 
-### Run docker image
-```
-docker run -it --rm -p <localport>:3838 <image>
-```
+## Access to ADVICER
 
-Explanation:
-* `-it` bind container input and output to current terminal. Use `-d` if you
-  want to run it a a daemon
-* `--rm` delete container when it stops
-* `-p <host-port>:<container-port>` Allows access to the container-app via
-  `http://localhost:<host-port>`. The shiny app is configured to run with port `3838`
-  in the container
+### https://advicer.computational.bio/
 
-Other useful options:
-* `-v <host-path>:<container-path>` mounts a directory from the host computer
-  into the container
+
+
+[sfb]: https://www.sfb1021.de/ ""
