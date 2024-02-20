@@ -1,4 +1,5 @@
 FROM rocker/shiny:4.2.3
+#FROM docker.io/rocker/shiny:4.2.3
 
 LABEL maintainer=TODO
 LABEL description=TODO
