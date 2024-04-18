@@ -137,6 +137,10 @@ ui <- fluidPage(
                   border-color: rgb(245, 245, 245, 0);
                   
                   }
+           #geneNotFound{
+            font-size: 20px;
+            font-style: bold;
+           }
             "
       ), 
       "#shiny-modal img { max-width: 100%; }", 
@@ -148,7 +152,7 @@ ui <- fluidPage(
   ), 
   
   # Application title
-  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-seq data")), windowTitle = "ADVICER"), 
+  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-Seq data")), windowTitle = "ADVICER"), 
   # Define tabs
   navbarPage(
     "", 
@@ -172,7 +176,8 @@ ui <- fluidPage(
                            max = 10, 
                            value = 1, 
                            step = 0.5), 
-               br()
+               br(),
+               downloadButton("downPlotSelect_csv", "Download table as csv", class = "butt0")
              ), 
              mainPanel(
                conditionalPanel(
@@ -249,8 +254,9 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg", "Download as svg")
              ), 
              mainPanel(
+               textOutput("geneNotFound"),
                plotOutput("geneX", height = 1000), 
-               br()
+               #br(),
              )), 
     tabPanel("Virus Comparison", 
              sidebarPanel(
@@ -436,7 +442,7 @@ server = function(input, output, session) {
   })
   
   # download results        
-  output$downSingle <- downloadHandler(
+  output$downPlotSelect_csv <- downloadHandler(
     filename = function(){
       return(paste0(input$fileToPlot, "_selected", ".csv"))}, 
     content = function(f){
@@ -812,11 +818,21 @@ server = function(input, output, session) {
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
-    if(is.null(data_lfc()) || input$gene==""){
-      return(NULL)
+    #if(is.null(data_lfc()) || input$gene==""){
+    #  return(NULL)
+    #}else{
+      if(toupper(input$gene) %in% rownames(data_lfc())){
+        data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+        plot(data$plotX)
+      }
+    #}
+  })
+  
+  output$geneNotFound <- renderText({
+    if(input$gene != "" & !toupper(input$gene) %in% rownames(data_lfc())){
+      print("Gene not found!")
     }else{
-      data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
-      plot(data$plotX)
+      print("")
     }
   })
   
@@ -1088,7 +1104,7 @@ server = function(input, output, session) {
         x.df$DP <- extract.info(x, "DP", as.numeric = F)
         x.df$Sample <- n
         colnames(x.df) <- c("Segment", "POS", "REF", "ALT", "AF", "DP", "Sample")
-        x.df$snp <- paste(x.df$POS, x.df$ALT, sep = "_")
+        x.df$snp <- paste(x.df$POS, x.df$REF, x.df$ALT, sep = "_")
         return(x.df)
       }
     }, simplify = F))
@@ -1105,6 +1121,7 @@ server = function(input, output, session) {
       v.df.mat <- Reduce(function(x, y)merge(x, y, by="snp", all=T, no.dups=F), lapply(names(v.df.split), function(x){
         df.tmp <- v.df.split[[x]]
         colnames(df.tmp) <- c("snp", x)
+        #df.tmp$id <- make.unique(as.character(df.tmp$snp))
         return(df.tmp)
       }))
       rownames(v.df.mat) <- v.df.mat$snp
