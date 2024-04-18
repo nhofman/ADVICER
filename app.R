@@ -132,15 +132,18 @@ ui <- fluidPage(
               border-right: 5px solid grey;
             }
             #help{
-                  border-radius: 15px;
-                  background-color: rgb(245, 245, 245, 0);
-                  border-color: rgb(245, 245, 245, 0);
-                  
-                  }
-           #geneNotFound{
-            font-size: 20px;
-            font-style: bold;
+              border-radius: 15px;
+              background-color: rgb(245, 245, 245, 0);
+              border-color: rgb(245, 245, 245, 0);
+            }
+            #geneNotFound{
+              font-size: 20px;
+              font-style: bold;
            }
+           .butt{
+              border: 2px solid black;
+              font-size: 16px;
+            } 
             "
       ), 
       "#shiny-modal img { max-width: 100%; }", 
@@ -177,7 +180,8 @@ ui <- fluidPage(
                            value = 1, 
                            step = 0.5), 
                br(),
-               downloadButton("downPlotSelect_csv", "Download table as csv", class = "butt0")
+               downloadButton("downPlotSelect_xlsx", "Download table as xlsx", class = "butt"),
+               downloadButton("downPlotSelect_csv", "Download table as csv")
              ), 
              mainPanel(
                conditionalPanel(
@@ -208,15 +212,12 @@ ui <- fluidPage(
                            value = 1, 
                            step = 0.5), 
                br(), 
-               actionButton("addHeat2", "Generate heatmap", class = "butt1"), 
+               actionButton("addHeat2", "Generate heatmap", class = "butt"), 
                br(), 
                br(), 
                h5(strong("Download table")), 
-               downloadButton("down_vXLSX", "Download as xlsx", class = "butt1"), 
-               tags$head(tags$style(".butt1{
-                                    border: 2px solid black;
-                                    font-size: 16px;}")), 
-               br(), 
+               downloadButton("down_vXLSX", "Download as xlsx", class = "butt"), 
+               #br(), 
                downloadButton("down_vCSV", "Download as csv")
              ), 
              mainPanel(
@@ -255,8 +256,7 @@ ui <- fluidPage(
              ), 
              mainPanel(
                textOutput("geneNotFound"),
-               plotOutput("geneX", height = 1000), 
-               #br(),
+               plotOutput("geneX", height = 1000)
              )), 
     tabPanel("Virus Comparison", 
              sidebarPanel(
@@ -281,15 +281,12 @@ ui <- fluidPage(
                            value = 20, 
                            step = 5), 
                br(), 
-               actionButton("addHeatAll", "Generate heatmap", class = "butt1"), 
+               actionButton("addHeatAll", "Generate heatmap", class = "butt"), 
                br(), 
                br(), 
                h5(strong("Download table (includes LFC and padj)")), 
                downloadButton("downallXLSX", "Download as xlsx", class = "butt"), 
-               tags$head(tags$style(".butt{
-                                    border: 2px solid black;
-                                    font-size: 16px;}")), 
-               br(), 
+               #br(), 
                downloadButton("downallCSV", "Download as csv")
              ), 
              mainPanel(
@@ -446,9 +443,21 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(input$fileToPlot, "_selected", ".csv"))}, 
     content = function(f){
-      write.csv(data.frame("Symbol"=unlist(input$upsetAll_click$elems)), f)
+      df <- select.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.csv(df, f)
     }, 
     contentType = "csv")
+  
+  output$downPlotSelect_xlsx <- downloadHandler(
+    filename = function(){
+      return(paste0(input$fileToPlot, "_selected", ".xlsx"))}, 
+    content = function(f){
+      df <- select.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.xlsx(df, f)
+    }, 
+    contentType = NULL)
   
   # set plotly_click to NULL or 1 on input change
   observeEvent(input$fileToPlot, {
@@ -463,16 +472,20 @@ server = function(input, output, session) {
     data$select_points <- 1
   })
   
-  # display table of clicked elements and associated LFC and padj in Volcano plot
-  output$clickVP <- renderDataTable({
-    req(!is.null(data$select_points))
-    selected <- event_data("plotly_selected") #selected_Volcano()
-    req(!is.null(selected))
+  # create table of selected elements
+  select.df <- reactive({
+    selected <- event_data("plotly_selected")
     df <- datasetInput[[input$fileToPlot]]
     df <- df[df$SYMBOL %in% selected$customdata, c("SYMBOL", "log2FoldChange", "padj")]
     df[, c(2:ncol(df))] <- signif(df[, c(2:ncol(df))], 4)
     df$LinkToNCBI <- createLink(df$SYMBOL)
     return(df)
+  })
+  
+  # display table of clicked elements and associated LFC and padj in Volcano plot
+  output$clickVP <- renderDataTable({
+    req(!is.null(data$select_points))
+    select.df()
   }, escape = F, rownames = F)
   
   # plot Volcano plot of selected sample
@@ -499,13 +512,7 @@ server = function(input, output, session) {
   # display table of clicked elements and associated LFC and padj in MA-plot
   output$clickMA <- renderDataTable({
     req(!is.null(data$select_points))
-    selected <- event_data("plotly_selected") 
-    req(!is.null(selected))
-    df <- datasetInput[[input$fileToPlot]]
-    df <- df[df$SYMBOL %in% selected$customdata, c("SYMBOL", "log2FoldChange", "padj")]
-    df[, c(2:ncol(df))] <- signif(df[, c(2:ncol(df))], 4)
-    df$LinkToNCBI <- createLink(df$SYMBOL)
-    return(df)
+    select.df()
   }, escape = F, rownames = F)
   
   # plot MA-plot of selected sample
@@ -582,7 +589,9 @@ server = function(input, output, session) {
       }
     }, 
     content = function(f){
-      write.csv(virus.df(), f, row.names = F)
+      df <- virus.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.csv(df, f, row.names = F)
     }, 
     contentType = "csv")
   
@@ -595,7 +604,9 @@ server = function(input, output, session) {
       }
     }, 
     content = function(f){
-      write.xlsx(virus.df(), f)
+      df <- virus.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.xlsx(df, f)
     })
   
   # select times to plot
@@ -821,10 +832,10 @@ server = function(input, output, session) {
     #if(is.null(data_lfc()) || input$gene==""){
     #  return(NULL)
     #}else{
-      if(toupper(input$gene) %in% rownames(data_lfc())){
-        data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
-        plot(data$plotX)
-      }
+    if(toupper(input$gene) %in% rownames(data_lfc())){
+      data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
+      plot(data$plotX)
+    }
     #}
   })
   
@@ -919,7 +930,9 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(gsub("&", "_", unlist(input$upsetAll_click$name)), ".csv"))}, 
     content = function(f){
-      write.csv(all.df(), f, row.names = F)
+      df <- all.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.csv(df, f, row.names = F)
     }, 
     contentType = "csv")
   
@@ -927,7 +940,9 @@ server = function(input, output, session) {
     filename = function(){
       return(paste0(gsub("&", "_", unlist(input$upsetAll_click$name)), ".xlsx"))}, 
     content = function(f){
-      write.xlsx(all.df(), f)
+      df <- all.df()
+      df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
+      write.xlsx(df, f)
     })
   
   # create dataframe of LFC and padj for the selected area
