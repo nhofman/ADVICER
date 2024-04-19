@@ -165,7 +165,8 @@ ui <- fluidPage(
                htmlOutput("download")
              ), 
              mainPanel(
-               downloadButton("filesDown", "Download selected files")
+               downloadButton("filesDownXlsx", HTML("Download selected file(s) in Excel format <b>(xlsx)</b>"), class = "butt"),
+               downloadButton("filesDown", HTML("Download selected file(s) in comma separated values format <b>(csv)</b>"), class = "butt")
              )
     ), 
     tabPanel("Volcano Plot / MA Plot", 
@@ -312,6 +313,7 @@ ui <- fluidPage(
 # Define directory containing data
 filedir <- getShinyOption("filedir")
 files.list <- list.files(filedir, pattern = ".*.csv", full.names = T)
+files.list.xlsx <- list.files(filedir, pattern = ".*.xlsx", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
 
 # Define font family
@@ -407,6 +409,25 @@ server = function(input, output, session) {
     contentType = "csv"
   )
   
+  output$filesDownXlsx <- downloadHandler(
+    filename = function(){
+      "data_xlsx.zip"
+    }, 
+    content = function(f){
+      files <- NULL
+      if("all" %in% input$filesToDown){
+        files <- files.list.xlsx
+      }else{
+        for (i in input$filesToDown){
+          fileName <- files.list.xlsx[grep(i, files.list.xlsx)] 
+          files <- c(files, fileName)
+        }
+      }
+      zip(f, files)
+    }, 
+    #contentType = "csv"
+  )
+  
   ## Volcano Plot / MA Plot
   
   # Help text
@@ -426,7 +447,7 @@ server = function(input, output, session) {
       img(src="volcano_modebar.jpg"), 
       HTML("<br><br>"), 
       tags$div("Further information for one or multiple points, like gene symbol, LFC and padj, can be shown by mouse over."), 
-      tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order."), 
+      tags$div("The selected genes are shown in tabular form along with their LFCs and padjs. A link to the NCBI database is provided for each gene. The link opens in a new tab outside the application. The table can be searched and all columns can be sorted in ascending and descending order. It can be downloaded in xlsx or csv file format."), 
       img(src="volcano_plot_select.jpg"), 
       easyClose = TRUE
     ))
