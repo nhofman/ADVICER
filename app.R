@@ -255,7 +255,6 @@ ui <- fluidPage(
                downloadButton("downGeneXsvg", "Download as svg")
              ), 
              mainPanel(
-               textOutput("geneNotFound"),
                plotOutput("geneX", height = 1000)
              )), 
     tabPanel("Virus Comparison", 
@@ -445,7 +444,7 @@ server = function(input, output, session) {
     content = function(f){
       df <- select.df()
       df$LinkToNCBI <- sub(".+\\\"(.+?)\\\".+", "\\1", df$LinkToNCBI)
-      write.csv(df, f)
+      write.csv(df, f, row.names = F)
     }, 
     contentType = "csv")
   
@@ -829,21 +828,19 @@ server = function(input, output, session) {
   
   # plot gene expression of selected viruses over time
   output$geneX <- renderPlot({
-    #if(is.null(data_lfc()) || input$gene==""){
-    #  return(NULL)
-    #}else{
     if(toupper(input$gene) %in% rownames(data_lfc())){
       data$plotX <- plotExpression(expr.df = data_lfc(), padj.df = data_padj(), gene = toupper(input$gene))
       plot(data$plotX)
     }
-    #}
   })
   
-  output$geneNotFound <- renderText({
+  # Show notification, if gene not found  
+  observe({
     if(input$gene != "" & !toupper(input$gene) %in% rownames(data_lfc())){
-      print("Gene not found!")
-    }else{
-      print("")
+      id <- showNotification("Gene not found!", duration = NULL, type = "warning", id = "abc")
+    }
+    if(toupper(input$gene) %in% rownames(data_lfc())){
+      removeNotification("abc")
     }
   })
   
