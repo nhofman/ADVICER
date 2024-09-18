@@ -155,7 +155,8 @@ ui <- fluidPage(
   ), 
   
   # Application title
-  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-Seq data")), windowTitle = "ADVICER"), 
+  titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-Seq data"),
+                 h4(HTML("Please cite: Hofmann et al. 2024, J Virol 0:e00935-24. <a href=https://doi.org/10.1128/jvi.00935-24 target=_blank>https://doi.org/10.1128/jvi.00935-24</a>"))), windowTitle = "ADVICER"), 
   # Define tabs
   navbarPage(
     "", 
@@ -206,6 +207,7 @@ ui <- fluidPage(
                            choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                            selected = NULL), 
                htmlOutput("selectTime"), 
+               em("(BPL samples were taken 24 h post infection.)"), 
                sliderInput("LFC", 
                            h5(strong("LFC cutoff:")), 
                            min = 0, 
@@ -265,7 +267,7 @@ ui <- fluidPage(
                                   choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
                                   selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")), 
                htmlOutput("selectCond"), 
-               em("(BPL samples were taken after 24h)"), 
+               em("(BPL samples were taken 24 h post infection.)"), 
                br(), 
                br(), 
                sliderInput("LFCall", 
