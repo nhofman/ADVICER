@@ -156,7 +156,7 @@ ui <- fluidPage(
   
   # Application title
   titlePanel(div(HTML("<b>ADVICER</b> - <b>A</b>nalysis <b>D</b>ashboard for <b>V</b>irus-<b>I</b>nduced <b>CE</b>ll <b>R</b>esponse based on RNA-Seq data"),
-                 h4(HTML("Please cite: Hofmann et al. 2024, J Virol 0:e00935-24. <a href=https://doi.org/10.1128/jvi.00935-24 target=_blank>https://doi.org/10.1128/jvi.00935-24</a> | Contact: <a href=mailto:advicer@computational.bio>advicer@computational.bio</a>"))), windowTitle = "ADVICER"), 
+                 h4(HTML("Please cite: Hofmann et al. 2024, J Virol 98:e00935-24. <a href=https://doi.org/10.1128/jvi.00935-24 target=_blank>https://doi.org/10.1128/jvi.00935-24</a> | Contact: <a href=mailto:advicer@computational.bio>advicer@computational.bio</a>"))), windowTitle = "ADVICER"), 
   # Define tabs
   navbarPage(
     "", 
