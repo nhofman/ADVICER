@@ -302,12 +302,15 @@ ui <- fluidPage(
     tabPanel("SNP Analysis", 
              sidebarPanel(
                div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))), 
-               selectInput("virusSNP", label = h5(strong("Select virus")), 
-                           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-                           selected = NULL)
+               #selectInput("virusSNP", label = h5(strong("Select virus")), 
+               #           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
+               #             selected = NULL)
+               htmlOutput("virusSNP"),
+               downloadButton("downSNPlot", "Download current plot")
              ), 
              mainPanel(
-               plotlyOutput("heatSNP", height = "1000px")
+               #plotlyOutput("heatSNP", height = "1000px")
+               imageOutput("SNPimage", width = "fit-content")
              )), 
   )
 )
@@ -317,6 +320,7 @@ filedir <- getShinyOption("filedir")
 files.list <- list.files(filedir, pattern = ".*.csv", full.names = T)
 files.list.xlsx <- list.files(filedir, pattern = ".*.xlsx", full.names = T)
 vcf.files <- list.files(filedir, pattern = ".*[1|2].vcf", full.names = T)
+snp.pdf <- list.files(filedir, pattern = ".svg", full.names = T)
 
 # Define font family
 #family = "Helvetica"
@@ -347,8 +351,12 @@ server = function(input, output, session) {
     #Sys.sleep(5)
     names(datasetInput) <- sub("deseq2_results_(.*).csv", "\\1", basename(files.list))
     datasetInput <- datasetInput[mixedorder(sub("vs_Mock_", "", names(datasetInput)))]
+    # Read vcf files
     vcf.list <- lapply(vcf.files, read.vcfR)
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
+    # Name snp images
+    snp.svg.names <- sub("\\..*.svg", "", basename(snp.pdf))
+    names(snp.pdf) <- snp.svg.names
   })
   
   # Help text
@@ -1103,100 +1111,37 @@ server = function(input, output, session) {
       size = "l", 
       tags$div("This tab is meant to explore the results of a variant analysis."), 
       HTML("<br>"), 
-      img(src="snp_sidebar.png"), 
+      img(src="snp_sidebar.jpg"), 
       HTML("<br><br>"), 
-      tags$div("The modebar in the upper right corner of the plot shows the following functions, that allow the user to interact with the plot: "), 
-      HTML("<br>"), 
-      img(src="snp_modebar.png"), 
-      HTML("<br><br>"), 
-      tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus over time. The user can get further information about a SNP/INDEL by hovering over a cell. The tooltip includes information about the SNP position on the genome, the nucleotide in the reference genome and the alternative nucleotide(s) as well as the frequency of a SNP and the read depth at the SNP position."), 
-      img(src="snp_mouseover.jpg"), 
+      tags$div("The plot shows the frequency of single nucleotide polymorphisms (SNP) and insertions and deletions (INDEL) of a chosen virus and segment over time. The genome length in nt and the position and name of annotated genes are shown on the x-axis."), 
+      HTML("<br>"),
+      img(src="snp_plot.jpg"), 
       easyClose = TRUE
     ))
   })
   
-  # add vertical line to plot
-  vline <- function(x = 0, color = "black") {
-    list(
-      type = "line", 
-      y0 = 0, 
-      y1 = 1, 
-      yref = "paper", 
-      x0 = x, 
-      x1 = x, 
-      line = list(color = color)
-    )
-  }
-  
-  # plot SNPs for selected  virus as heatmap
-  output$heatSNP <- renderPlotly({
-    v <- input$virusSNP
-    v.df <- Reduce(rbind, sapply(names(vcf.list[grep(v, names(vcf.list))]), function(n){
-      x <- vcf.list[[n]]
-      x.df <- as.data.frame(x@fix, stringsAsFactors = F)[, c("CHROM", "POS", "REF", "ALT")]
-      if(nrow(x.df)>0){
-        x.df$AF <- extract.info(x, "AF", as.numeric = T)
-        x.df$DP <- extract.info(x, "DP", as.numeric = F)
-        x.df$Sample <- n
-        colnames(x.df) <- c("Segment", "POS", "REF", "ALT", "AF", "DP", "Sample")
-        x.df$snp <- paste(x.df$POS, x.df$REF, x.df$ALT, sep = "_")
-        return(x.df)
-      }
-    }, simplify = F))
-    
-    x_break <- which(sub("_[1|2]$", "", mixedsort(unique(v.df$Sample)))[-1] != sub("_[1|2]$", "", mixedsort(unique(v.df$Sample)))[-length(sub("_[1|2]$", "", mixedsort(unique(v.df$Sample))))])
-    
-    # create plotly heatmap for each segment
-    p <- lapply(mixedsort(unique(v.df$Segment)), function(x){
-      v.df.mod <- v.df[v.df$Segment==x, ]
-      v.df.mod$snp <- factor(v.df.mod$snp, levels = mixedsort(unique(v.df.mod$snp)))
-      v.df.mod$Sample <- factor(v.df.mod$Sample, levels = mixedsort(unique(v.df$Sample)))
-      
-      v.df.split <- split(v.df.mod[, c("snp", "AF")], v.df.mod$Sample)
-      v.df.mat <- Reduce(function(x, y)merge(x, y, by="snp", all=T, no.dups=F), lapply(names(v.df.split), function(x){
-        df.tmp <- v.df.split[[x]]
-        colnames(df.tmp) <- c("snp", x)
-        #df.tmp$id <- make.unique(as.character(df.tmp$snp))
-        return(df.tmp)
-      }))
-      rownames(v.df.mat) <- v.df.mat$snp
-      v.df.mat <- as.matrix(v.df.mat[, -1])
-      v.df.mat[is.na(v.df.mat)] <- 0
-      
-      
-      #create matrix with hoverinfo per sample and snp
-      hover <- matrix(ncol = length(levels(v.df.mod$Sample)), nrow = length(unique(v.df.mod$snp)))
-      colnames(hover) <- levels(v.df.mod$Sample)
-      rownames(hover) <- mixedsort(unique(v.df.mod$snp))
-      for(i in unique(v.df.mod$snp)){
-        for(s in unique(v.df.mod$Sample)){
-          if(nrow(v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, ]) > 0){
-            hover[i, s] <- sprintf("Sample: %s<br />Position: %s<br />Reference: %s<br />Alternative: %s<br />Frequency: %s<br />Depth: %s", 
-                                   s, v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "POS"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "REF"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "ALT"], 
-                                   v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "AF"], v.df.mod[v.df.mod$Sample==s & v.df.mod$snp==i, "DP"])
-          }else{
-            hover[i, s] <- NA
-          }
-        }
-      }
-      
-      plot_ly(x=colnames(v.df.mat), y=rownames(v.df.mat), z = v.df.mat, type = "heatmap", colors = "Greys", showlegend = F, zmin = 0, zmax = 1, zauto = F, 
-              text = hover, hoverinfo = "text") %>%  #hovertemplate = "x : %{x}\ny : %{y}\nDepth : %{customdata}<extra></extra>") %>% 
-        layout(shapes=lapply(x_break-0.5, vline)) %>% config(displayModeBar = TRUE) %>%
-        add_annotations(
-          text = x, 
-          x = 0.5, 
-          y = 1, 
-          yref = "paper", 
-          xref = "paper", 
-          xanchor = "left", 
-          yanchor = "bottom", 
-          showarrow = FALSE, 
-          font = list(size = 15)
-        )
-    })
-    subplot(p, shareX = T, nrows = length(unique(v.df$Segment)))
+  # Render image selection
+  output$virusSNP <- renderUI({
+    selectInput("virusSeg", label = "Choose file", choices = snp.svg.names, selected = NULL)
   })
+  
+  # Render selected image
+  output$SNPimage <- renderImage({ 
+      req(!is.null(input$virusSeg))
+        list(src = snp.pdf[[input$virusSeg]]) 
+    }, 
+    deleteFile = FALSE 
+  ) 
+  
+  # Download image
+  output$downSNPlot <- downloadHandler(
+    filename = function(){
+      return(input$virusSeg)}, 
+    content = function(f){
+     file.copy(snp.pdf[[input$virusSeg]], f)
+    }, 
+    contentType = NULL)
+
 }
 
 # Run the application 
