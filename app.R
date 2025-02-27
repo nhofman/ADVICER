@@ -355,7 +355,7 @@ server = function(input, output, session) {
     vcf.list <- lapply(vcf.files, read.vcfR)
     names(vcf.list) <- sub(".vcf", "", basename(vcf.files))
     # Name snp images
-    snp.svg.names <- sub("\\..*.svg", "", basename(snp.pdf))
+    snp.svg.names <- sub(".svg", "", basename(snp.pdf))
     names(snp.pdf) <- snp.svg.names
   })
   
@@ -1136,7 +1136,7 @@ server = function(input, output, session) {
   # Download image
   output$downSNPlot <- downloadHandler(
     filename = function(){
-      return(input$virusSeg)}, 
+      return(paste0(input$virusSeg, ".svg"))}, 
     content = function(f){
      file.copy(snp.pdf[[input$virusSeg]], f)
     }, 
