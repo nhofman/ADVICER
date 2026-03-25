@@ -74,8 +74,6 @@ plotExpression <- function(expr.df, padj.df, gene){
   rownames(lfc.gene) <- lfc.gene[, 1]
   lfc.gene <- lfc.gene[, -1]
   colnames(lfc.gene) <- c("lfc", "padj")
-  #lfc.gene$padj[is.na(lfc.gene$padj)] <- 10
-  #lfc.gene <- lfc.gene[complete.cases(lfc.gene), ]
   lfc.gene$sig <- ifelse(lfc.gene$padj<0.0001, "***", ifelse(lfc.gene$padj<0.001, "**", ifelse(lfc.gene$padj<0.05, "*", "")))
   lfc.gene$group <- sub("_.*", "", rownames(lfc.gene))
   lfc.gene$time <- sub(".*_(.*_.*)", "\\1", rownames(lfc.gene)) 
@@ -99,7 +97,6 @@ plotExpression <- function(expr.df, padj.df, gene){
           axis.title = element_text(size = 15, face = "bold", family = "Helvetica"), plot.title = element_text(size = 20, family = "Helvetica", face = "bold")) +
     theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
   p <- gridExtra::arrangeGrob(p1, p2, ncol = 1, heights = c(10, 10))
-  #dev.off()
   return(p)
 }
 
@@ -226,7 +223,7 @@ ui <- fluidPage(
              mainPanel(
                conditionalPanel(
                  condition = 'input.plotType == "UpSet"', 
-                 upsetjsOutput("upset"), #, click = "upsetClick"), 
+                 upsetjsOutput("upset"), 
                  br(), 
                  br(), 
                  DT::dataTableOutput("clickedElements"), 
@@ -235,7 +232,7 @@ ui <- fluidPage(
                ), 
                conditionalPanel(
                  condition = 'input.plotType == "Venn"', 
-                 upsetjsOutput("upsetVenn"), #, click = "upsetClick"), 
+                 upsetjsOutput("upsetVenn"), 
                  br(), 
                  textOutput("headerVenn"), 
                  br(), 
@@ -265,7 +262,7 @@ ui <- fluidPage(
                div(style = "text-align:right", actionButton("help4", label = div(strong("Help"), icon("question")))), 
                checkboxGroupInput("select", label = h5(strong("Select viruses")), 
                                   choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-                                  selected = NULL), #c("H1N1", "H5N1", "MERS", "CoV229E", "RVFV", "SFSV", "RSV", "NIV", "EBOV")), 
+                                  selected = NULL), 
                htmlOutput("selectCond"), 
                em("(BPL samples were taken 24 h post infection.)"), 
                br(), 
@@ -292,7 +289,7 @@ ui <- fluidPage(
                downloadButton("downallCSV", "Download as csv")
              ), 
              mainPanel(
-               upsetjsOutput("upsetAll"), #, click = "upsetClick"), 
+               upsetjsOutput("upsetAll"), 
                br(), 
                DT::dataTableOutput("clickedElementsAll"), 
                br(), 
@@ -302,14 +299,10 @@ ui <- fluidPage(
     tabPanel("SNP Analysis", 
              sidebarPanel(
                div(style = "text-align:right", actionButton("help6", label = div(strong("Help"), icon("question")))), 
-               #selectInput("virusSNP", label = h5(strong("Select virus")), 
-               #           choices = list("H1N1", "H5N1", "RVFV", "SFSV", "RSV", "NiV", "EBOV", "MARV", "LASV"), 
-               #             selected = NULL)
                htmlOutput("virusSNP"),
                downloadButton("downSNPlot", "Download current plot")
              ), 
              mainPanel(
-               #plotlyOutput("heatSNP", height = "1000px")
                imageOutput("SNPimage", width = "fit-content")
              )), 
   )
@@ -532,10 +525,9 @@ server = function(input, output, session) {
                             ifelse(file.data$log2FoldChange < -(input$LFCsingle) & file.data$padj < 0.05 & apply(file.data[, grep("normalized", colnames(file.data))], 1, max) >= 10, "down", "not significant"))
     p <- plot_ly(file.data, type = "scatter", x = ~log2FoldChange, y = ~-log10(padj), color = ~col, colors = c("up"="red", "down"="steelblue3", "not significant"="black"), 
                  mode = "markers", marker = list(size = 5), customdata = ~SYMBOL, 
-                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#, 
-    #source = "V")
+                 text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))
     p <- p %>% layout(legend = list(orientation = "h", y = -0.2), xaxis = list(exponentformat = "none"), dragmode = "select") %>% config(displayModeBar = TRUE)  
-    #p <- p %>% event_register("plotly_selected")
+    
     return(p)
   })
   
@@ -561,8 +553,7 @@ server = function(input, output, session) {
       file.data$baseMeanSample <- rowMeans(file.data[, grep("normalized", colnames(file.data))])
       p <- plot_ly(file.data, type = "scatter", x = ~log2(baseMean), y = ~log2FoldChange, color = ~col, colors =c("up"="red", "down"="steelblue3", "not significant"="black"), 
                    mode = "markers", marker = list(size = 5), customdata = ~SYMBOL, 
-                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))#, 
-      #source = "M")
+                   text = ~paste("Gene: ", SYMBOL, '<br>LFC: ', signif(log2FoldChange, 4), '<br>padj: ', signif(padj, 4)))
       p <- p %>% layout(legend = list(orientation = "h", y = -0.2), yaxis = list(exponentformat = "none"), dragmode = "select") %>% config(displayModeBar = TRUE)
       return(p)
     }
@@ -582,22 +573,17 @@ server = function(input, output, session) {
       "The Venn diagram shows the intersections of genes from the selected gene lists. For reasons of clarity, a maximum number of 5 lists can be displayed.", 
       img(src="time_venn.jpg"), 
       tags$div("Clicking an intersection will display underlying genes in a sortable table along with log2FoldChange (LFC), adjusted p-value (padj) and a link to the NCBI database. The table can be downloaded as xlsx or csv file."), 
-      #HTML("<br><br>"), 
       img(src="time_venn_select.jpg"), 
       HTML("<br><br>"), 
       tags$div("The UpSet plot shows the intersections of genes in a matrix-like layout. This approach allows to compare a larger number of sets. Each bar shows an intersection of genes with the corresponding number. In the respective column below you can see the samples involved, marked with black dots. For example in the plot below 263 genes are differentially expressed (see bar) after 6h and 12h (see black dots in column below)."), 
       tags$div("Genes in an intersection can be listed in a sortable table along with LFC, padj and a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded as xlsx or csv file."), 
-      #img(src="time_upset.jpg"), 
       img(src="time_upset_select.jpg"), 
-      HTML("<br><br>"), 
-      #HTML("<br><br>"), 
+      HTML("<br><br>"),  
       tags$div("The selected genes can also be shown in a heatmap by clicking on the button in the sidebar. To get information about the underlying data click on a specific cell."), 
       img(src="time_heatmap_select.jpg"), 
       HTML("<br><br>"), 
       tags$div("The modebar beneath the heatmap shows the following functions, that allow the user to interact with and download the plot:"), 
-      #HTML("<br><br>"), 
       img(src="heatmap_modebar.jpg"), 
-      #HTML("<br><br>"), 
       tags$div("The user is able to zoom into the heatmap by dragging a box over the area of interest. The new heatmap is drawn in the box 'Selected sub-heatmap' next to the original heatmap."), 
       HTML("<br>"), 
       img(src="time_heatmap_zoom.jpg"), 
@@ -663,7 +649,6 @@ server = function(input, output, session) {
   observe({
     input$upsetVenn_click$elems
     input$upset_click$elems
-    #data$heatCplx <- FALSE
     data$dt <- 1
   })
   
@@ -692,7 +677,7 @@ server = function(input, output, session) {
     }else{
       removeUI(paste0("#ht", data$heatmap_id, "_heatmap_widget *"), multiple = T)
     }
-  }) #%>% bindEvent(input$addHeat2, ignoreInit = T)
+  }) 
   
   click_action <- function(df, output) {
     output$info <- renderUI({
@@ -935,10 +920,8 @@ server = function(input, output, session) {
                "For each virus all genes differentially expressed in at least one of the selected conditions are pooled. A gene is considered differentially expressed if: log2FoldChange (LFC) > ", tags$i("LFC cutoff"), " and adjusted p-value (padj) < 0.05 and a normalized gene count of at least one sample ≥ 10."), 
       img(src="viruses_upset.jpg"), 
       tags$div("Genes in an intersection can be listed in a sortable table along with a link to the NCBI database by clicking on the appropriate bar. The table can be downloaded in xlsx or csv format and then also contains the LFC and padj for all selected conditions.", 
-               "The selected bar in the example (colored orange) shows, that there are 318 genes that are diff. expressed in at least one of the included time points (see sidebar) in NiV and RSV (see black dots in column below)."), 
-      #HTML("<br><br>"), 
-      img(src="viruses_upset_select.jpg"), 
-      #HTML("<br><br>"), 
+               "The selected bar in the example (colored orange) shows, that there are 318 genes that are diff. expressed in at least one of the included time points (see sidebar) in NiV and RSV (see black dots in column below)."),  
+      img(src="viruses_upset_select.jpg"),  
       tags$div("To display a selected intersection as heatmap click on the button in the sidebar. The user can get further information about the underlying data by clicking on a specific cell."), 
       img(src="viruses_heatmap_select.jpg"), 
       HTML("<br><br>"), 

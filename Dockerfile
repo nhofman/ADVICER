@@ -1,5 +1,4 @@
 FROM rocker/shiny:4.2.3
-#FROM docker.io/rocker/shiny:4.2.3
 
 LABEL maintainer=TODO
 LABEL description=TODO
@@ -15,13 +14,10 @@ RUN wget \
     && mkdir /root/.conda \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
     && rm -f Miniconda3-latest-Linux-x86_64.sh 
-#RUN conda install -c plotly plotly-orca
 
 RUN apt-get install -y libxss1 libasound-dev
 
-#devtools::install_github("rstudio/fontawesome"); \
-#devtools::install_version("htmltools", version="0.5.2"); \
-#install.packages("https://cran.r-project.org/src/contrib/shiny_1.7.1.tar.gz", repos=NULL, type="source"); \
+
 RUN Rscript -e 'install.packages("shiny"); \
                 install.packages("shinyBS"); \
                 install.packages("DT"); \

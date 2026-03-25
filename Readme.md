@@ -8,13 +8,22 @@ The application uses DESeq2 result tables to:
 * plot the expression of a specific gene over time 
 * show SNPs and Indels for each virus over time
 
-## Citation/Paper
-In preparation
-
 ## Access to ADVICER
 
 ### https://advicer.computational.bio/
 
+## Citation/Paper
 
+Hofmann N, Bartkuhn M, Becker S, Biedenkopf N, Böttcher-Friebertshäuser E, Brinkrolf K, Dietzel E, Fehling SK, Goesmann A, Heindl MR, Hoffmann S, Karl N, Maisner A, Mostafa A, Kornecki L, Müller-Kräuter H, Müller-Ruttloff C, Nist A, Pleschka S, Sauerhering L, Stiewe T, Strecker T, Wilhelm J, Wuerth JD, Ziebuhr J, Weber F, Schmitz ML.2024.Distinct negative-sense RNA viruses induce a common set of transcripts encoding proteins forming an extensive network. J Virol98:e00935-24.https://doi.org/10.1128/jvi.00935-24
+
+## Contact
+
+Nina Hofmann<br />
+advicer@computational.bio<br />
+
+Bioinformatics and Systems Biology<br />
+Justus Liebig University Giessen<br />
+35392 Giessen<br />
+Germany
 
 [sfb]: https://www.sfb1021.de/ ""
